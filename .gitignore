@@ -1,5 +1,111 @@
+# ---------------------------
+# General
+# ---------------------------
+*.swp
+*.swo
+*~
+*.tmp
+*.log
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.bak
+
+# ---------------------------
+# Build results
+# ---------------------------
 bin/
 obj/
-/packages/
-riderModule.iml
-/_ReSharper.Caches/
+out/
+[Bb]uild/
+[Ll]og/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+
+# Rider (JetBrains)
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Visual Studio
+.vs/
+
+# ---------------------------
+# ASP.NET Core specific
+# ---------------------------
+# User secrets
+secrets.json
+# Auto-generated files
+Generated_Code/
+wwwroot/dist/
+wwwroot/lib/
+
+# If you store uploaded files locally (like CVs or images)
+wwwroot/files/
+wwwroot/images/
+
+# ---------------------------
+# NuGet
+# ---------------------------
+*.nupkg
+*.snupkg
+*.nugetprops
+*.nuget.targets
+project.lock.json
+project.fragment.lock.json
+artifacts/
+packages/
+*.vspscc
+*.vssscc
+.nuget/
+
+# ---------------------------
+# Entity Framework / Migrations cache
+# ---------------------------
+Migrations/
+
+# ---------------------------
+# Configuration files
+# ---------------------------
+# Don’t ignore appsettings.json (important for app config),
+# but ignore local overrides:
+appsettings.Development.json
+appsettings.Local.json
+appsettings.*.local.json
+
+# ---------------------------
+# Other
+# ---------------------------
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
+*.dbmdl
+*.dbproj.schemaview
+
+# Docker
+*.pid
+docker-compose.override.yml
+
+# Rider specific caches
+.idea/.idea.*
+.idea/*/workspace.xml
+.idea/*/tasks.xml
+.idea/*/dictionaries
+.idea/*/shelf/
+
+# JetBrains Rider plugin files
+.idea/httpRequests/
+.idea/.idea.httpRequests/
+
+# ---------------------------
+# MacOS / Linux / Windows system files
+# ---------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
