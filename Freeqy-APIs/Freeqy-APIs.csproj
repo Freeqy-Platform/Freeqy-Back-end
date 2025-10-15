@@ -21,7 +21,6 @@
     <ItemGroup>
       <Folder Include="Authentication\" />
       <Folder Include="Contracts\" />
-      <Folder Include="Entities\" />
       <Folder Include="Errors\" />
       <Folder Include="Helper\" />
       <Folder Include="Mapping\" />
