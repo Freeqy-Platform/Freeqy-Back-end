@@ -1,0 +1,21 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Freeqy-APIs", "Freeqy-APIs\Freeqy-APIs.csproj", "{C20A7FF8-8471-4EE3-BFE3-4CE30CCCF8AC}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{B71F1BBD-B834-49D1-B8BC-6AEBCE9BD1B7}"
+	ProjectSection(SolutionItems) = preProject
+		compose.yaml = compose.yaml
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C20A7FF8-8471-4EE3-BFE3-4CE30CCCF8AC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C20A7FF8-8471-4EE3-BFE3-4CE30CCCF8AC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C20A7FF8-8471-4EE3-BFE3-4CE30CCCF8AC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C20A7FF8-8471-4EE3-BFE3-4CE30CCCF8AC}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

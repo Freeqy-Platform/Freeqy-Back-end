@@ -1,0 +1,6 @@
+@Freeqy_APIs_HostAddress = http://localhost:5030
+
+GET {{Freeqy_APIs_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

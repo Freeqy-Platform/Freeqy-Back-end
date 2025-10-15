@@ -1,0 +1,7 @@
+﻿services:
+  freeqy-apis:
+    image: freeqy-apis
+    build:
+      context: .
+      dockerfile: Freeqy-APIs/Dockerfile
+
