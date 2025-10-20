@@ -1,25 +1,16 @@
-using Freeqy_APIs.Persistancec;
-using Freeqy_APIs.Repositories;
-using Freeqy_APIs.Services;
-using Mapster;
-using MapsterMapper;
-using Microsoft.EntityFrameworkCore;
-using System.Reflection;
-
 namespace Freeqy_APIs;
 
 public static class Dependenceies
 {
-    public static IServiceCollection AddDependency(this IServiceCollection services, WebApplicationBuilder builder)
+    public static IServiceCollection AddDependency(this IServiceCollection services, IConfiguration configuration)
     {
+        services.AddControllers();
 
-        var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+        services.AddAuthConfig(configuration);
+
+        var connectionString = configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
         services.AddDbContext<ApplicationDbContext>(options => options.UseSqlServer(connectionString));
-
-        // Add services to the container.
-
-        services.AddControllers();
 
         // Add swagger
         services.AddSwaggerGen();
@@ -30,6 +21,11 @@ public static class Dependenceies
         // Add Password Reset Services
         services.AddPasswordResetServices();
         
+        services.AddScoped<IAuthService, AuthService>();
+        services.AddSingleton<IJwtProvider, JwtProvider>();
+
+        services.AddFluentValidation();
+
         return services;
     }
 
@@ -72,6 +68,45 @@ public static class Dependenceies
         // When replaced with real EF Core implementations, change back to Scoped
         services.AddSingleton<IUserRepository, MockUserRepository>();
         services.AddSingleton<IPasswordResetTokenRepository, MockPasswordResetTokenRepository>();
+
+        return services;
+    }
+
+    public static IServiceCollection AddFluentValidation(this IServiceCollection services)
+    {
+        services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
+        services.AddFluentValidationAutoValidation();
+        services.AddFluentValidationClientsideAdapters();
+
+        return services;
+    }
+
+    private static IServiceCollection AddAuthConfig(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddIdentity<ApplicationUser, IdentityRole>()
+            .AddEntityFrameworkStores<ApplicationDbContext>();
+
+        var jwtSettings = configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>();
+
+        services.AddAuthentication(options =>
+        {
+            options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        })
+        .AddJwtBearer(options =>
+        {
+            options.SaveToken = true;
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuerSigningKey = true,
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings?.Key!)),
+                ValidIssuer = jwtSettings?.Issuer,
+                ValidAudience = jwtSettings?.Audience
+            };
+        });
 
         return services;
     }
