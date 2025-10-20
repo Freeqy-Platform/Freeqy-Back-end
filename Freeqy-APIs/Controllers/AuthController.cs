@@ -1,24 +1,13 @@
-using Freeqy_APIs.Abstractions;
-using Freeqy_APIs.Contracts;
-using Freeqy_APIs.Services;
-using Microsoft.AspNetCore.Mvc;
-
 namespace Freeqy_APIs.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class AuthController : ControllerBase
+public class AuthController(IPasswordResetService passwordResetService, ILogger<AuthController> logger,
+    IAuthService authService) : ControllerBase
 {
-    private readonly IPasswordResetService _passwordResetService;
-    private readonly ILogger<AuthController> _logger;
-
-    public AuthController(
-        IPasswordResetService passwordResetService,
-        ILogger<AuthController> logger)
-    {
-        _passwordResetService = passwordResetService;
-        _logger = logger;
-    }
+    private readonly IPasswordResetService _passwordResetService = passwordResetService;
+    private readonly ILogger<AuthController> _logger = logger;
+    private readonly IAuthService _authService = authService;
 
     /// <summary>
     /// Initiates the forgot password flow by sending a reset token to the user's email.
@@ -73,9 +62,11 @@ public class AuthController : ControllerBase
         return Ok(result.Value);
     }
 
-    // Adham TODO: add the following endpoints here:
-    // - POST /api/auth/register
-    // - POST /api/auth/login
-    // - POST /api/auth/refresh-token
-    // - POST /api/auth/logout
+    [HttpPost("login")]
+    public async Task<IActionResult> LoginAsync(LoginRequest request, CancellationToken cancellationToken)
+    {
+        var authResult = await _authService.GetTokenAsync(request.Email, request.Password, cancellationToken);
+
+        return authResult is null ? BadRequest("Invalid email/password") : Ok(authResult);
+    }
 }

@@ -3,7 +3,7 @@ using Freeqy_APIs;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add Dependency 
-builder.Services.AddDependency(builder);
+builder.Services.AddDependency(builder.Configuration);
 
 
 var app = builder.Build();
