@@ -1,6 +1,8 @@
 using System.Reflection;
 using Mapster;
 using MapsterMapper;
+using Freeqy_APIs.Repositories;
+using Freeqy_APIs.Services;
 
 namespace Freeqy_APIs;
 
@@ -18,6 +20,9 @@ public static class Dependenceies
 
         //Add Mapster
         services.AddMapsterDependcy();
+
+        // Add Password Reset Services
+        services.AddPasswordResetServices();
         
         return services;
     }
@@ -44,5 +49,24 @@ public static class Dependenceies
 
         services.AddSingleton<IMapper>(new Mapper(mappingConfig));
         return  services;
+    }
+
+    private static IServiceCollection AddPasswordResetServices(this IServiceCollection services)
+    {
+        // Register Password Reset Service
+        services.AddScoped<IPasswordResetService, PasswordResetService>();
+
+        // Register Email Service (Mock for now - replace with real implementation later)
+        services.AddScoped<IEmailService, MockEmailService>();
+
+        // Register Password Hasher (Mock for now - your teammate will replace with BCrypt/Argon2)
+        services.AddScoped<IPasswordHasher, MockPasswordHasher>();
+
+        // Register Mock Repositories as SINGLETON to maintain in-memory state across requests
+        // When replaced with real EF Core implementations, change back to Scoped
+        services.AddSingleton<IUserRepository, MockUserRepository>();
+        services.AddSingleton<IPasswordResetTokenRepository, MockPasswordResetTokenRepository>();
+
+        return services;
     }
 }
