@@ -23,12 +23,8 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Contracts\" />
-      <Folder Include="Errors\" />
       <Folder Include="Helper\" />
       <Folder Include="Persistance\" />
-      <Folder Include="Repositories\" />
-      <Folder Include="Services\" />
       <Folder Include="Templates\" />
     </ItemGroup>
 
