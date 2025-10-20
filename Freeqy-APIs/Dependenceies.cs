@@ -1,15 +1,21 @@
-using System.Reflection;
-using Mapster;
-using MapsterMapper;
+using Freeqy_APIs.Persistancec;
 using Freeqy_APIs.Repositories;
 using Freeqy_APIs.Services;
+using Mapster;
+using MapsterMapper;
+using Microsoft.EntityFrameworkCore;
+using System.Reflection;
 
 namespace Freeqy_APIs;
 
 public static class Dependenceies
 {
-    public static IServiceCollection AddDependency(this IServiceCollection services)
+    public static IServiceCollection AddDependency(this IServiceCollection services, WebApplicationBuilder builder)
     {
+
+        var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+
+        services.AddDbContext<ApplicationDbContext>(options => options.UseSqlServer(connectionString));
 
         // Add services to the container.
 
