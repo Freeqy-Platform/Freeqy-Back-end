@@ -3,8 +3,8 @@
 services:
   freeqy-apis:
     build:
-      context: ./Freeqy-APIs       # 👈 ده المجلد اللي فيه الكود و Dockerfile
-      dockerfile: Dockerfile       # 👈 اسم الملف فقط، مش المسار الكامل
+      context: ./Freeqy-APIs       
+      dockerfile: Dockerfile      
     container_name: freeqy-apis
     ports:
       - "5000:8080"  # host:container
