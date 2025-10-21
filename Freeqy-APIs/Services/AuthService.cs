@@ -9,7 +9,6 @@ public class AuthService(UserManager<ApplicationUser> userManager, IJwtProvider 
     private readonly IJwtProvider _jwtProvider = jwtProvider;
     private readonly SignInManager<ApplicationUser> _signInManager = signInManager;
     private readonly ILogger<AuthService> _logger = logger;
-
     public async Task<Result<AuthResponse>> GetTokenAsync(string email, string password, CancellationToken cancellationToken = default)
     {  
         if (await _userManager.FindByEmailAsync(email) is not { } user)
@@ -60,5 +59,55 @@ public class AuthService(UserManager<ApplicationUser> userManager, IJwtProvider 
         var error = result.Errors.First();
 
         return Result.Failure<AuthResponse>(new Error(error.Code, error.Description, StatusCodes.Status400BadRequest));
+    }
+
+    public async Task<Result> ForgotPasswordAsync(ForgetPasswordRequest request, CancellationToken cancellationToken = default)
+    {
+        var user = await _userManager.FindByEmailAsync(request.Email);
+        if (user == null)
+            return Result.Success();
+
+        if (!user.EmailConfirmed)
+        {
+            return Result.Failure(UserErrors.EmailNotConfirmed);
+        }
+
+        var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+        token = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
+        
+        _logger.LogInformation("this is the token {}", token);
+
+        // Send Email
+        
+        return Result.Success();
+    }
+    
+    
+
+    public async Task<Result> ResetPasswordAsync(ResetPasswordRequest request, CancellationToken cancellationToken = default)
+    {
+        var user = await _userManager.FindByEmailAsync(request.Email);
+        
+        if (user == null)
+            return Result.Success();
+
+        IdentityResult result;
+        try
+        {
+            var token = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(request.Token));
+            result = await _userManager.ResetPasswordAsync(user, token, request.NewPassword);
+        }catch(FormatException ex)
+        {
+            _logger.LogError(ex, "Error resetting password");
+            result  = IdentityResult.Failed(_userManager.ErrorDescriber.InvalidToken());
+        }
+
+        if (result.Succeeded)
+        {
+            return  Result.Success();
+        }
+        var error = result.Errors.First();
+
+        return Result.Failure(new Error(error.Code, error.Description, StatusCodes.Status401Unauthorized));
     }
 }

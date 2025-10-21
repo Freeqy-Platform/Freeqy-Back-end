@@ -1,6 +1,6 @@
 namespace Freeqy_APIs.Contracts.Authentication;
 
-public record ForgotPasswordResponse
+public record ForgetPasswordResponse
 {
     public required string Message { get; init; }
     public required string Token { get; init; }

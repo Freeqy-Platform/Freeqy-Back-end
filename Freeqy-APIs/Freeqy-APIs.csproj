@@ -34,7 +34,6 @@
 
     <ItemGroup>
       <Folder Include="Helper\" />
-      <Folder Include="Persistance\" />
       <Folder Include="Templates\" />
     </ItemGroup>
 

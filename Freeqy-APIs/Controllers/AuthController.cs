@@ -2,10 +2,10 @@ namespace Freeqy_APIs.Controllers;
 
 [ApiController]
 [Route("api/v1/[controller]")]
-public class AuthController(IPasswordResetService passwordResetService, ILogger<AuthController> logger,
+public class AuthController(ILogger<AuthController> logger,
     IAuthService authService) : ControllerBase
 {
-    private readonly IPasswordResetService _passwordResetService = passwordResetService;
+    
     private readonly ILogger<AuthController> _logger = logger;
     private readonly IAuthService _authService = authService;
 
@@ -16,23 +16,23 @@ public class AuthController(IPasswordResetService passwordResetService, ILogger<
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A response containing the reset token and expiration time.</returns>
     [HttpPost("forgot-password")]
-    [ProducesResponseType(typeof(ForgotPasswordResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    // [ProducesResponseType(typeof(ForgetPasswordResponse), StatusCodes.Status200OK)]
+    // [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    // [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> ForgotPassword(
-        [FromBody] ForgotPasswordRequest request, 
+        [FromBody] ForgetPasswordRequest request, 
         CancellationToken cancellationToken)
     {
         _logger.LogInformation("Forgot password request received for email: {Email}", request.Email);
 
-        var result = await _passwordResetService.ForgotPasswordAsync(request, cancellationToken);
+        var result = await _authService.ForgotPasswordAsync(request, cancellationToken);
 
         if (result.IsFailure)
         {
             return result.ToProblem();
         }
 
-        return Ok(result.Value);
+        return Ok();
     }
 
     /// <summary>
@@ -42,24 +42,24 @@ public class AuthController(IPasswordResetService passwordResetService, ILogger<
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A success message if the password was reset.</returns>
     [HttpPost("reset-password")]
-    [ProducesResponseType(typeof(ResetPasswordResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    // [ProducesResponseType(typeof(ResetPasswordResponse), StatusCodes.Status200OK)]
+    // [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    // [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    // [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> ResetPassword(
         [FromBody] ResetPasswordRequest request, 
         CancellationToken cancellationToken)
     {
         _logger.LogInformation("Reset password request received");
 
-        var result = await _passwordResetService.ResetPasswordAsync(request, cancellationToken);
+        var result = await _authService.ResetPasswordAsync(request, cancellationToken);
 
         if (result.IsFailure)
         {
             return result.ToProblem();
         }
 
-        return Ok(result.Value);
+        return Ok();
     }
 
     [HttpPost("login")]
