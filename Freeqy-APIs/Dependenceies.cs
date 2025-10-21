@@ -1,3 +1,6 @@
+using Freeqy_APIs.Configrautions;
+using Microsoft.AspNetCore.Identity.UI.Services;
+
 namespace Freeqy_APIs;
 
 public static class Dependenceies
@@ -19,12 +22,17 @@ public static class Dependenceies
         services.AddMapsterDependcy();
 
         // Add Password Reset Services
-        services.AddPasswordResetServices();
+        // services.AddPasswordResetServices();
         
         services.AddScoped<IAuthService, AuthService>();
         services.AddSingleton<IJwtProvider, JwtProvider>();
-
+        services.AddScoped<IEmailSender, EmailService>();
         services.AddFluentValidation();
+        
+        services.AddHttpContextAccessor();
+        
+        // Configure Mail
+        services.Configure<MailConfig>(configuration.GetSection(nameof(MailConfig)));
 
         return services;
     }
@@ -53,16 +61,16 @@ public static class Dependenceies
         return  services;
     }
 
-    private static IServiceCollection AddPasswordResetServices(this IServiceCollection services)
-    {
-
-        // Register Mock Repositories as SINGLETON to maintain in-memory state across requests
-        // When replaced with real EF Core implementations, change back to Scoped
-        services.AddSingleton<IUserRepository, MockUserRepository>();
-        services.AddSingleton<IPasswordResetTokenRepository, MockPasswordResetTokenRepository>();
-
-        return services;
-    }
+    // private static IServiceCollection AddPasswordResetServices(this IServiceCollection services)
+    // {
+    //
+    //     // Register Mock Repositories as SINGLETON to maintain in-memory state across requests
+    //     // When replaced with real EF Core implementations, change back to Scoped
+    //     services.AddSingleton<IUserRepository, MockUserRepository>();
+    //     services.AddSingleton<IPasswordResetTokenRepository, MockPasswordResetTokenRepository>();
+    //
+    //     return services;
+    // }
 
     public static IServiceCollection AddFluentValidation(this IServiceCollection services)
     {

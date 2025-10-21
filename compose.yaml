@@ -1,7 +1,42 @@
-﻿services:
-  freeqy-apis:
-    image: freeqy-apis
-    build:
-      context: .
-      dockerfile: Freeqy-APIs/Dockerfile
+﻿version: "3.9"
 
+services:
+  freeqy-apis:
+    build:
+      context: ./Freeqy-APIs       # 👈 ده المجلد اللي فيه الكود و Dockerfile
+      dockerfile: Dockerfile       # 👈 اسم الملف فقط، مش المسار الكامل
+    container_name: freeqy-apis
+    ports:
+      - "5000:8080"  # host:container
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Production"
+
+      # Database connection
+      ConnectionStrings__DefaultConnection: "Server=mssql,1433;Database=EFdb;User Id=sa;Password=Som3a-mssqlserver;TrustServerCertificate=True;"
+
+      # JWT
+      Jwt__Key: "super_long_random_secret_key_1234567890_ABCDEFGH"
+
+      # Mail config
+      MailConfig__Host: "smtp.gmail.com"
+      MailConfig__Port: "587"
+      MailConfig__Mail: "depalh19@gmail.com"
+      MailConfig__Password: "qjehsizmknlwhlpe"
+      MailConfig__DisplayName: "Freeqy Platform"
+
+    depends_on:
+      - mssql
+
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: mssql
+    ports:
+      - "1433:1433"
+    environment:
+      SA_PASSWORD: "Som3a-mssqlserver"
+      ACCEPT_EULA: "Y"
+    volumes:
+      - mssql_data:/var/opt/mssql
+
+volumes:
+  mssql_data:

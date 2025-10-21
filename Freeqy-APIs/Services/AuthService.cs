@@ -1,14 +1,22 @@
-﻿using Microsoft.AspNetCore.WebUtilities;
+﻿
+using Freeqy_APIs.Helper;
+using Microsoft.AspNetCore.Identity.UI.Services;
+using Microsoft.AspNetCore.WebUtilities;
+using static Freeqy_APIs.Contracts.Authentication.RegisterRequest;
+
 
 namespace Freeqy_APIs.Services;
 
 public class AuthService(UserManager<ApplicationUser> userManager, IJwtProvider jwtProvider,
-    SignInManager<ApplicationUser> signInManager, ILogger<AuthService> logger) : IAuthService
+    SignInManager<ApplicationUser> signInManager, ILogger<AuthService> logger, IHttpContextAccessor accessor, IEmailSender emailService) : IAuthService
 {
     private readonly UserManager<ApplicationUser> _userManager = userManager;
     private readonly IJwtProvider _jwtProvider = jwtProvider;
     private readonly SignInManager<ApplicationUser> _signInManager = signInManager;
     private readonly ILogger<AuthService> _logger = logger;
+    private readonly IHttpContextAccessor _httpContextAccessor = accessor;
+    private readonly IEmailSender _emailService = emailService;
+
     public async Task<Result<AuthResponse>> GetTokenAsync(string email, string password, CancellationToken cancellationToken = default)
     {  
         if (await _userManager.FindByEmailAsync(email) is not { } user)
@@ -39,7 +47,7 @@ public class AuthService(UserManager<ApplicationUser> userManager, IJwtProvider 
         var emailIsExists = await _userManager.Users.AnyAsync(x => x.Email == request.Email, cancellationToken);  
         
         if (emailIsExists)
-            return Result.Failure<AuthResponse>(UserErrors.DuplicaetdEmail);  
+            return Result.Failure<AuthResponse>(UserErrors.DuplicateEmail);  
         
         var user = request.Adapt<ApplicationUser>();
 
@@ -50,9 +58,9 @@ public class AuthService(UserManager<ApplicationUser> userManager, IJwtProvider 
             var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);    
             code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
 
-            _logger.LogInformation("Email confirmation code: {Code}", code); 
+            _logger.LogInformation("Email confirmation code: {Code}", code);
 
-            //TODO: Send email
+            await SendConfirmationEmail(user, code);
             return Result.Success();    
         }
 
@@ -61,7 +69,7 @@ public class AuthService(UserManager<ApplicationUser> userManager, IJwtProvider 
         return Result.Failure<AuthResponse>(new Error(error.Code, error.Description, StatusCodes.Status400BadRequest));
     }
 
-    public async Task<Result> ForgotPasswordAsync(ForgetPasswordRequest request, CancellationToken cancellationToken = default)
+    public async Task<Result> ForgetPasswordAsync(ForgetPasswordRequest request)
     {
         var user = await _userManager.FindByEmailAsync(request.Email);
         if (user == null)
@@ -77,19 +85,72 @@ public class AuthService(UserManager<ApplicationUser> userManager, IJwtProvider 
         
         _logger.LogInformation("this is the token {}", token);
 
-        // Send Email
+        await SendResetPasswordCode(user, token);
         
         return Result.Success();
     }
-    
-    
+
+    public async Task<Result> ResendConfirmationCodeAsync(ResendConfirmationEmailRequest request)
+    {
+        if (await _userManager.FindByEmailAsync(request.Email) is not { } user)
+        {
+            return Result.Success();
+        }
+
+        if (user.EmailConfirmed)
+        {
+            return  Result.Failure(UserErrors.DuplicateEmailConfirmed);
+        }
+        
+        var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);    
+        code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+
+        _logger.LogInformation("Email confirmation code: {Code}", code); 
+
+        await SendConfirmationEmail(user,  code);
+        return Result.Success();    
+        
+    }
+    public async Task<Result> ConfirmEmailAsync(ConfirmationEmailRequest request)
+    {
+
+        if ( await _userManager.FindByIdAsync(request.Id) is not {} user)
+            return Result.Failure(UserErrors.InvalidToken);
+
+        if (user.EmailConfirmed)
+        {
+            return Result.Failure(UserErrors.DuplicateEmailConfirmed);
+        }
+
+        IdentityResult result;
+        try
+        {
+            var code = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(request.Code));
+            result = await _userManager.ConfirmEmailAsync(user, code);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error confirming email");
+            return Result.Failure(UserErrors.InvalidToken);
+        }
+        
+
+        if (result.Succeeded)
+        {
+            return Result.Success();
+        }
+        
+        var error = result.Errors.First();
+        
+        return Result.Failure(new Error(error.Code, error.Description, StatusCodes.Status400BadRequest));
+    }
 
     public async Task<Result> ResetPasswordAsync(ResetPasswordRequest request, CancellationToken cancellationToken = default)
     {
-        var user = await _userManager.FindByEmailAsync(request.Email);
-        
-        if (user == null)
-            return Result.Success();
+        var user = await _userManager.FindByIdAsync(request.Id);
+
+        if (user is not { EmailConfirmed: true })
+            return Result.Failure(UserErrors.InvalidToken);
 
         IdentityResult result;
         try
@@ -110,4 +171,39 @@ public class AuthService(UserManager<ApplicationUser> userManager, IJwtProvider 
 
         return Result.Failure(new Error(error.Code, error.Description, StatusCodes.Status401Unauthorized));
     }
+
+
+    private async Task SendConfirmationEmail(ApplicationUser user, string code)
+    {
+        var origin = _httpContextAccessor.HttpContext?.Request.Headers.Origin;
+
+        var emailBody = EmailBuilder.GenerateEmailBody("confirmation-email",
+            emailBody: new Dictionary<string, string>
+            {
+                { "{{name}}", user.FirstName },
+                { "{{action_url}}", $"{origin}/auth/emailConfirmation?userId={user.Id}&code={code}" }
+            }
+        );
+        
+        await _emailService.SendEmailAsync(user.Email!, "Freeqy Email Confirmation", emailBody);
+        await Task.CompletedTask;
+    }
+
+
+    private async Task SendResetPasswordCode(ApplicationUser user, string code)
+    {
+        var origin = _httpContextAccessor.HttpContext?.Request.Headers.Origin;
+        var emailBody = EmailBuilder.GenerateEmailBody("reset-password",
+            new Dictionary<string, string>
+            {
+                {"{{name}}", user.FirstName },
+                { "{{action_url}}", $"{origin}/auth/resetPassword?userId={user.Id}&code={code}" }
+            }
+        );
+        
+        await _emailService.SendEmailAsync(user.Email!, "Reset Password", emailBody);
+        await Task.CompletedTask;
+    }
+    
+    
 }
