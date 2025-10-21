@@ -20,8 +20,8 @@ services:
       # Mail config
       MailConfig__Host: "smtp.gmail.com"
       MailConfig__Port: "587"
-      MailConfig__Mail: ""
-      MailConfig__Password: ""
+      MailConfig__Mail: "depalh19@gmail.com"
+      MailConfig__Password: "qjehsizmknlwhlpe"
       MailConfig__DisplayName: "Freeqy Platform"
 
     depends_on:
