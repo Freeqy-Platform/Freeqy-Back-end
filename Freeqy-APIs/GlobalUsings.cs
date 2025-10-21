@@ -24,3 +24,5 @@ global using Microsoft.AspNetCore.Authentication.JwtBearer;
 global using Microsoft.IdentityModel.Tokens;
 global using System.Text;
 global using Microsoft.Extensions.Options;
+global using Freeqy_APIs.Abstractions.Consts;
+global using Freeqy_APIs.Errors;

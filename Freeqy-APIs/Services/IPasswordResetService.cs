@@ -1,5 +1,4 @@
 using Freeqy_APIs.Abstractions;
-using Freeqy_APIs.Contracts;
 
 namespace Freeqy_APIs.Services;
 

@@ -1,7 +1,7 @@
 namespace Freeqy_APIs.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/v1/[controller]")]
 public class AuthController(IPasswordResetService passwordResetService, ILogger<AuthController> logger,
     IAuthService authService) : ControllerBase
 {
@@ -67,6 +67,14 @@ public class AuthController(IPasswordResetService passwordResetService, ILogger<
     {
         var authResult = await _authService.GetTokenAsync(request.Email, request.Password, cancellationToken);
 
-        return authResult is null ? BadRequest("Invalid email/password") : Ok(authResult);
+        return authResult.IsSuccess ? Ok(authResult.Value) : authResult.ToProblem();
+    }
+
+    [HttpPost("register")]
+    public async Task<IActionResult> Register([FromBody] RegisterRequest request, CancellationToken cancellationToken)
+    {
+        var result = await _authService.RegisterAsync(request, cancellationToken);
+
+        return result.IsSuccess ? Ok() : result.ToProblem();
     }
 }

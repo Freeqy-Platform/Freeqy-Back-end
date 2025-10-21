@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace Freeqy_APIs.Contracts;
+namespace Freeqy_APIs.Contracts.Authentication;
 
 public record ResetPasswordRequest
 {
