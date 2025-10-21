@@ -1,6 +1,5 @@
 using System.Security.Cryptography;
 using Freeqy_APIs.Abstractions;
-using Freeqy_APIs.Contracts;
 using Freeqy_APIs.Entities;
 using Freeqy_APIs.Errors;
 using Freeqy_APIs.Repositories;
