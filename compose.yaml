@@ -12,7 +12,7 @@ services:
       ASPNETCORE_ENVIRONMENT: "Production"
 
       # Database connection
-      ConnectionStrings__DefaultConnection: "Server=mssql,1433;Database=EFdb;User Id=sa;Password=Som3a-mssqlserver;TrustServerCertificate=True;"
+      ConnectionStrings__DefaultConnection: "Server=mssql,1433;Database=EFdb;User Id=sa;Password=Freeqy-database0;TrustServerCertificate=True;"
 
       # JWT
       Jwt__Key: "super_long_random_secret_key_1234567890_ABCDEFGH"
@@ -20,8 +20,8 @@ services:
       # Mail config
       MailConfig__Host: "smtp.gmail.com"
       MailConfig__Port: "587"
-      MailConfig__Mail: "depalh19@gmail.com"
-      MailConfig__Password: "qjehsizmknlwhlpe"
+      MailConfig__Mail: ""
+      MailConfig__Password: ""
       MailConfig__DisplayName: "Freeqy Platform"
 
     depends_on:
@@ -33,7 +33,7 @@ services:
     ports:
       - "1433:1433"
     environment:
-      SA_PASSWORD: "Som3a-mssqlserver"
+      SA_PASSWORD: "Freeqy-database0"
       ACCEPT_EULA: "Y"
     volumes:
       - mssql_data:/var/opt/mssql
