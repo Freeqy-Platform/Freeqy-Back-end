@@ -1,4 +1,5 @@
 ﻿FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
+USER $APP_UID
 WORKDIR /app
 EXPOSE 8080
 EXPOSE 8081
@@ -6,14 +7,15 @@ EXPOSE 8081
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["Freeqy-APIs.csproj", "./"]
-RUN dotnet restore "Freeqy-APIs.csproj"
+COPY ["Freeqy-APIs/Freeqy-APIs.csproj", "Freeqy-APIs/"]
+RUN dotnet restore "./Freeqy-APIs/Freeqy-APIs.csproj"
 COPY . .
-RUN dotnet build "Freeqy-APIs.csproj" -c $BUILD_CONFIGURATION -o /app/build
+WORKDIR "/src/Freeqy-APIs"
+RUN dotnet build "./Freeqy-APIs.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "Freeqy-APIs.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "./Freeqy-APIs.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 FROM base AS final
 WORKDIR /app

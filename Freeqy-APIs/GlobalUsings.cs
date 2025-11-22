@@ -17,7 +17,7 @@ global using Microsoft.AspNetCore.Authorization;
 global using FluentValidation.AspNetCore;
 global using Freeqy_APIs.Authentication;
 global using Freeqy_APIs.Persistancec;
-global using Freeqy_APIs.Repositories;
+// global using Freeqy_APIs.Repositories;
 global using Mapster;
 global using MapsterMapper;
 global using Microsoft.AspNetCore.Authentication.JwtBearer;

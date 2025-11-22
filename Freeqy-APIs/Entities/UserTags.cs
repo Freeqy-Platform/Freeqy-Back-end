@@ -1,6 +1,6 @@
 namespace Freeqy_APIs.Entities;
 
-public class User
+public class UserTags
 {
     
 }
