@@ -1,27 +1,27 @@
 namespace Freeqy_APIs.Contracts.Projects;
 
 public record SimpleUserDto(
-    long UserId,
+    string UserId,
     string Name
 );
 
 public record CategoryDto(
-    long CategoryId,
+    string CategoryId,
     string Name
 );
 
 public record TagDto(
-    long TagId,
+    string TagId,
     string Name
 );
 
 public record TechnologyDto(
-    long TechnologyId,
+    string TechnologyId,
     string Name
 );
 
 public record ProjectListItemResponse(
-    long ProjectId,
+    string ProjectId,
     string Name,
     string Description,
     SimpleUserDto Owner,
