@@ -27,6 +27,7 @@ public static class Dependenceies
         services.AddScoped<IAuthService, AuthService>();
         services.AddSingleton<IJwtProvider, JwtProvider>();
         services.AddScoped<IEmailSender, EmailService>();
+        services.AddScoped<IUserService, UserService>();
         services.AddFluentValidation();
         
         services.AddHttpContextAccessor();
