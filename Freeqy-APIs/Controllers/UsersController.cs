@@ -14,4 +14,12 @@ public class UsersController(IUserService userService) : ControllerBase
 
 		return Ok(result.Value);
 	}
+
+	[HttpPut("me")]
+	public async Task<IActionResult> UpdateProfile([FromBody] UpdateUserProfileRequest request)
+	{
+		var result = await _userService.UpdateProfileAsync(User.GetUserId()!, request);
+
+		return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
+	}
 }

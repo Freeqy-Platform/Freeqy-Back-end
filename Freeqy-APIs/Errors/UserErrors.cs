@@ -19,4 +19,7 @@ public class UserErrors
     
     public static readonly Error DuplicateEmailConfirmed = 
         new("User.DuplicateEmailConfirmed", "Another user with the same email is already confirmed", StatusCodes.Status409Conflict);
+
+    public static readonly Error UserNotFound =
+        new("User.UserNotFound", "User not found", StatusCodes.Status404NotFound);
 }
