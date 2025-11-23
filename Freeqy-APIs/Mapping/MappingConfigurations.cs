@@ -29,5 +29,7 @@ public class MappingConfigurations : IRegister
         config.NewConfig<Entities.Technologies, Contracts.Projects.TechnologyDto>()
             .Map(dest => dest.TechnologyId, src => src.Id)
             .Map(dest => dest.Name, src => src.Name);
-    }
+
+		TypeAdapterConfig<ApplicationUser, UserProfileResponse>.NewConfig();
+	}
 }
