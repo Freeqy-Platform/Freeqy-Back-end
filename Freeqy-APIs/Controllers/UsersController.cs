@@ -22,4 +22,12 @@ public class UsersController(IUserService userService) : ControllerBase
 
 		return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
 	}
+
+	[HttpGet("{id}")]
+	public async Task<IActionResult> GetUserById(string id)
+	{
+		var result = await _userService.GetUserByIdAsync(id);
+
+		return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
+	}
 }
