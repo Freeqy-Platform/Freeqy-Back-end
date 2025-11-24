@@ -1,13 +1,37 @@
-﻿namespace Freeqy_APIs.Mapping;
+﻿using Freeqy_APIs.Contracts.Projects;
+
+namespace Freeqy_APIs.Mapping;
 
 public class MappingConfigurations : IRegister
 {
     public void Register(TypeAdapterConfig config)
     {
+        // User Registration Mapping
         config.NewConfig<RegisterRequest, ApplicationUser>()
             .Map(dest => dest.UserName, src => src.Email);
 
-        config.NewConfig<Entities.Projects, Contracts.Projects.ProjectListItemResponse>()
+        // ApplicationUser → SimpleUserDto
+        config.NewConfig<ApplicationUser, SimpleUserDto>()
+            .Map(dest => dest.UserId, src => src.Id)
+            .Map(dest => dest.Name, src => src.FirstName + " " + src.LastName);
+
+        // Category → CategoryDto
+        config.NewConfig<Categories, CategoryDto>()
+            .Map(dest => dest.CategoryId, src => src.Id)
+            .Map(dest => dest.Name, src => src.Name);
+
+        // Technology → TechnologyDto
+        config.NewConfig<Technologies, TechnologyDto>()
+            .Map(dest => dest.TechnologyId, src => src.Id)
+            .Map(dest => dest.Name, src => src.Name);
+
+        // Tag → TagDto (Future use)
+        config.NewConfig<Tags, TagDto>()
+            .Map(dest => dest.TagId, src => src.Id)
+            .Map(dest => dest.Name, src => src.Name);
+
+        // Projects → ProjectListItemResponse
+        config.NewConfig<Projects, ProjectListItemResponse>()
             .Map(dest => dest.ProjectId, src => src.Id)
             .Map(dest => dest.Name, src => src.Name)
             .Map(dest => dest.Description, src => src.Description)
@@ -16,20 +40,24 @@ public class MappingConfigurations : IRegister
             .Map(dest => dest.EstimatedTime, src => src.EstimatedTime)
             .Map(dest => dest.CreatedAt, src => src.CreatedAt)
             .Map(dest => dest.UpdatedAt, src => src.UpdatedAt)
-            .Map(dest => dest.Category, src => new Contracts.Projects.CategoryDto(src.Category.Id, src.Category.Name))
-            .Map(dest => dest.Owner, src => new Contracts.Projects.SimpleUserDto(src.Owner.Id, src.Owner.FirstName + " " + src.Owner.LastName))
-            // .Map(dest => dest.Technologies, src => src.ProjectTechnologies.Select(pt => new Contracts.Projects.TechnologyDto(pt.technology.Id, pt.technology.Name)).ToList())
-            .Map(dest => dest.MembersCount, src => src.ProjectMembers.Count)
-            .Map(dest => dest.Tags, src => src.ProjectMembers.Where(pm => pm.IsActive).Select(pm => new Contracts.Projects.TagDto(pm.UserId, "")).ToList()); // Placeholder for tags mapping
 
-        config.NewConfig<Entities.Tags, Contracts.Projects.TagDto>()
-            .Map(dest => dest.TagId, src => src.Id)
-            .Map(dest => dest.Name, src => src.Name);
+            // Owner Mapping
+            .Map(dest => dest.Owner, src => src.Owner.Adapt<SimpleUserDto>())
 
-        config.NewConfig<Entities.Technologies, Contracts.Projects.TechnologyDto>()
-            .Map(dest => dest.TechnologyId, src => src.Id)
-            .Map(dest => dest.Name, src => src.Name);
+            // Category Mapping
+            .Map(dest => dest.Category, src => src.Category.Adapt<CategoryDto>())
 
-		TypeAdapterConfig<ApplicationUser, UserProfileResponse>.NewConfig();
-	}
+            // Technologies Mapping
+            .Map(dest => dest.Technologies,
+                src => src.Technologies.Select(t => t.Adapt<TechnologyDto>()).ToList())
+
+            // You have no Tags entity in Project → return empty list
+            .Map(dest => dest.Tags, src => new List<TagDto>())
+
+            // Members Count
+            .Map(dest => dest.MembersCount, src => src.ProjectMembers.Count);
+
+        // Additional mappings
+        TypeAdapterConfig<ApplicationUser, UserProfileResponse>.NewConfig();
+    }
 }
