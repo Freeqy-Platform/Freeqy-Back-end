@@ -12,7 +12,7 @@ public class UsersController(IUserService userService) : ControllerBase
 	{
 		var result = await _userService.GetProfileAsync(User.GetUserId()!);
 
-		return Ok(result.Value);
+		return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
 	}
 
 	[HttpPut("me")]
@@ -27,6 +27,14 @@ public class UsersController(IUserService userService) : ControllerBase
 	public async Task<IActionResult> GetUserById(string id)
 	{
 		var result = await _userService.GetUserByIdAsync(id);
+
+		return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
+	}
+
+	[HttpGet("")]
+	public async Task<IActionResult> GetAll([FromQuery] UserProfileRequestFilter userProfileRequestFilter, CancellationToken cancellationToken)
+	{
+		var result = await _userService.GetAllAsync(userProfileRequestFilter, cancellationToken);
 
 		return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
 	}

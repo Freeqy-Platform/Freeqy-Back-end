@@ -64,4 +64,31 @@ public class UserService(UserManager<ApplicationUser> userManager) : IUserServic
 
 		return Result.Success(user);
 	}
+
+	public async Task<Result<IEnumerable<UserProfileResponse>>> GetAllAsync(UserProfileRequestFilter profileRequestFilter, CancellationToken cancellationToken)
+	{
+		var query = _userManager.Users.AsQueryable();
+
+		if (!string.IsNullOrEmpty(profileRequestFilter.Name))
+		{
+			query = query.Where(u => u.FirstName.Contains(profileRequestFilter.Name));
+		}
+		if (!string.IsNullOrEmpty(profileRequestFilter.Track))
+		{
+			query = query.Where(u => u.Track!.Name.Contains(profileRequestFilter.Track));
+		}
+		if (profileRequestFilter.Skills is not null && profileRequestFilter.Skills.Any())
+		{
+			query = query.Where(u => u.Skills.Any(s => profileRequestFilter.Skills.Contains(s.Skill!.Name)));
+		}
+
+		var users = await query
+			.Include(u => u.Track)
+			.Include(u => u.Skills)
+			.ThenInclude(us => us.Skill)
+			.ProjectToType<UserProfileResponse>()
+			.ToListAsync(cancellationToken);
+
+		return Result.Success<IEnumerable<UserProfileResponse>>(users);
+	}
 }

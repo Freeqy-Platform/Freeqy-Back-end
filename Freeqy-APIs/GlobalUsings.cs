@@ -28,3 +28,4 @@ global using Freeqy_APIs.Abstractions.Consts;
 global using Freeqy_APIs.Errors;
 global using Freeqy_APIs.Extensions;
 global using Freeqy_APIs.Contracts.Users;
+global using Freeqy_APIs.Contracts.Skills;
