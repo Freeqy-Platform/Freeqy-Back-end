@@ -31,6 +31,6 @@ public class Projects
     public Categories Category { get; set; }
 
     // Navigation properties
-    public ICollection<ProjectMembers> ProjectMembers { get; set; } = new List<ProjectMembers>();
-    public ICollection<ProjectTechnologies> ProjectTechnologies { get; set; } = new List<ProjectTechnologies>();
+    public ICollection<ProjectMembers> ProjectMembers { get; set; } =[];
+    public IEnumerable<Technologies> Technologies { get; set; } = [];
 }

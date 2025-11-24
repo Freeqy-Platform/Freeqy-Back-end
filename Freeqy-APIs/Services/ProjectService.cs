@@ -13,9 +13,9 @@ public class ProjectService(ApplicationDbContext dbContext, IMapper mapper) : IP
         var projectsQuery = _dbContext.Set<Projects>()
             .Include(p => p.Category)
             .Include(p => p.Owner)
-            .Include(p => p.ProjectTechnologies)
-                .ThenInclude(pt => pt.technology)
-            .Include(p => p.ProjectMembers)
+            // .Include(p => p.ProjectTechnologies)
+            //     .ThenInclude(pt => pt.technology)
+            // .Include(p => p.ProjectMembers)
             .AsQueryable();
 
         // Use Mapster projection to DTO

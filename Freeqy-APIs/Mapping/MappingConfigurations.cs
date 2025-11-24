@@ -18,7 +18,7 @@ public class MappingConfigurations : IRegister
             .Map(dest => dest.UpdatedAt, src => src.UpdatedAt)
             .Map(dest => dest.Category, src => new Contracts.Projects.CategoryDto(src.Category.Id, src.Category.Name))
             .Map(dest => dest.Owner, src => new Contracts.Projects.SimpleUserDto(src.Owner.Id, src.Owner.FirstName + " " + src.Owner.LastName))
-            .Map(dest => dest.Technologies, src => src.ProjectTechnologies.Select(pt => new Contracts.Projects.TechnologyDto(pt.technology.Id, pt.technology.Name)).ToList())
+            // .Map(dest => dest.Technologies, src => src.ProjectTechnologies.Select(pt => new Contracts.Projects.TechnologyDto(pt.technology.Id, pt.technology.Name)).ToList())
             .Map(dest => dest.MembersCount, src => src.ProjectMembers.Count)
             .Map(dest => dest.Tags, src => src.ProjectMembers.Where(pm => pm.IsActive).Select(pm => new Contracts.Projects.TagDto(pm.UserId, "")).ToList()); // Placeholder for tags mapping
 
