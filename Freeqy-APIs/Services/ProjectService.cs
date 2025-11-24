@@ -8,18 +8,15 @@ public class ProjectService(ApplicationDbContext dbContext, IMapper mapper) : IP
     private readonly ApplicationDbContext _dbContext = dbContext;
     private readonly IMapper _mapper = mapper;
 
-    public async Task<Result<ProjectListResponse>> GetProjectsAsync(CancellationToken cancellationToken = default)
+    public async Task<Result<ProjectListResponse>> GetProjectsAsync(
+        CancellationToken cancellationToken = default)
     {
-        var projectsQuery = _dbContext.Set<Projects>()
+        var projectList = await _dbContext.Set<Projects>()
+            .AsNoTracking()
             .Include(p => p.Category)
             .Include(p => p.Owner)
-            // .Include(p => p.ProjectTechnologies)
-            //     .ThenInclude(pt => pt.technology)
-            // .Include(p => p.ProjectMembers)
-            .AsQueryable();
-
-        // Use Mapster projection to DTO
-        var projectList = await projectsQuery
+            .Include(p => p.ProjectMembers)
+            .Include(p => p.Technologies)
             .ProjectToType<ProjectListItemResponse>()
             .ToListAsync(cancellationToken);
 
