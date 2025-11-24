@@ -30,8 +30,6 @@ public class MappingConfigurations : IRegister
             .Map(dest => dest.TechnologyId, src => src.Id)
             .Map(dest => dest.Name, src => src.Name);
 
-		config.NewConfig<ApplicationUser, UserProfileResponse>()
-            .Map(dest => dest.Track, src => src.Track!.Name)
-            .Map(dest => dest.Skills, src => src.Skills.Select(us => us.Skill));
+        config.NewConfig<ApplicationUser, UserProfileResponse>();
 	}
 }
