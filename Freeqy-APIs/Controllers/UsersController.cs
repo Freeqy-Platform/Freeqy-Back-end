@@ -12,7 +12,7 @@ public class UsersController(IUserService userService) : ControllerBase
 	{
 		var result = await _userService.GetProfileAsync(User.GetUserId()!);
 
-		return Ok(result.Value);
+		return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
 	}
 
 	[HttpPut("me")]
@@ -48,6 +48,14 @@ public class UsersController(IUserService userService) : ControllerBase
 	public async Task<IActionResult> UploadMyPhoto([FromForm] IFormFile photo)
 	{
 		var result = await _userService.UploadUserPhotoAsync(User.GetUserId()!, photo);
+
+		return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
+	}
+
+	[HttpGet("")]
+	public async Task<IActionResult> GetAll([FromQuery] UserProfileRequestFilter userProfileRequestFilter, CancellationToken cancellationToken)
+	{
+		var result = await _userService.GetAllAsync(userProfileRequestFilter, cancellationToken);
 
 		return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
 	}
