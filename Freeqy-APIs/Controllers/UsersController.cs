@@ -30,4 +30,25 @@ public class UsersController(IUserService userService) : ControllerBase
 
 		return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
 	}
+
+	[HttpGet("me/photo")]
+	public async Task<IActionResult> GetMyPhoto()
+	{
+		var result = await _userService.GetUserPhotoUrlAsync(User.GetUserId()!);
+
+		if (result.IsFailure)
+			return result.ToProblem();
+
+		// Return the photo URL
+		return Ok(new { photoUrl = result.Value });
+	}
+
+	[HttpPost("me/photo")]
+	[RequestSizeLimit(5 * 1024 * 1024)] // 5MB limit
+	public async Task<IActionResult> UploadMyPhoto([FromForm] IFormFile photo)
+	{
+		var result = await _userService.UploadUserPhotoAsync(User.GetUserId()!, photo);
+
+		return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
+	}
 }

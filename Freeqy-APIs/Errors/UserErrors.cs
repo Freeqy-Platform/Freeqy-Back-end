@@ -22,4 +22,16 @@ public class UserErrors
 
     public static readonly Error UserNotFound =
         new("User.UserNotFound", "User not found", StatusCodes.Status404NotFound);
+
+    public static readonly Error PhotoNotFound =
+        new("User.PhotoNotFound", "User photo not found", StatusCodes.Status404NotFound);
+
+    public static readonly Error InvalidPhotoFile =
+        new("User.InvalidPhotoFile", "Invalid photo file. Please upload a valid image (JPEG, PNG, or WebP).", StatusCodes.Status400BadRequest);
+
+    public static readonly Error PhotoFileTooLarge =
+        new("User.PhotoFileTooLarge", "Photo file is too large. Maximum size is 5MB.", StatusCodes.Status400BadRequest);
+
+    public static readonly Error NoPhotoProvided =
+        new("User.NoPhotoProvided", "No photo file was provided.", StatusCodes.Status400BadRequest);
 }

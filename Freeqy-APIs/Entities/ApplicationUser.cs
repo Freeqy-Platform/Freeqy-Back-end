@@ -9,7 +9,8 @@ public sealed class ApplicationUser : IdentityUser
 	}
 
 	public string FirstName { get; set; } = string.Empty;
-    public string LastName { get; set; } = string.Empty;
+	public string LastName { get; set; } = string.Empty;
+	public string? PhotoUrl { get; set; }
     
-    public IEnumerable<RefreshToken> RefreshTokens { get; set; } = [];
+	public IEnumerable<RefreshToken> RefreshTokens { get; set; } = [];
 }
