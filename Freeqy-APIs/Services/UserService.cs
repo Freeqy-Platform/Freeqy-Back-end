@@ -35,14 +35,33 @@ public class UserService(UserManager<ApplicationUser> userManager) : IUserServic
 
 		if (result.Succeeded)
 		{
-			await _userManager.UpdateAsync(user);
 			var response = user.Adapt<UserProfileResponse>();
 
 			return Result.Success(response);
 		}
 
-		var error = result.Errors.First();
+		var error = result.Errors.FirstOrDefault();
 
-		return Result.Failure<UserProfileResponse>(new Error(error.Code, error.Description, StatusCodes.Status400BadRequest));
+		if (error is null)
+		{
+			return Result.Failure<UserProfileResponse>(
+				new Error("User.UpdateFailed", "Failed to update user profile", StatusCodes.Status500InternalServerError));
+		}
+
+		return Result.Failure<UserProfileResponse>(
+			new Error(error.Code, error.Description, StatusCodes.Status400BadRequest));
+	}
+
+	public async Task<Result<UserProfileResponse>> GetUserByIdAsync(string userId)
+	{
+		var user = await _userManager.Users
+			.Where(u => u.Id == userId)
+			.ProjectToType<UserProfileResponse>()
+			.SingleOrDefaultAsync();
+
+		if (user is null)
+			return Result.Failure<UserProfileResponse>(UserErrors.UserNotFound);
+
+		return Result.Success(user);
 	}
 }
