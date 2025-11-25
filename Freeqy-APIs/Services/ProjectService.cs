@@ -1,4 +1,4 @@
-using Freeqy_APIs.Contracts.Category;
+﻿using Freeqy_APIs.Contracts.Category;
 using Freeqy_APIs.Contracts.Projects;
 using Freeqy_APIs.Contracts.Technology;
 using Freeqy_APIs.Entities;
@@ -125,6 +125,53 @@ public class ProjectService(ApplicationDbContext dbContext, UserManager<Applicat
         await _dbContext.SaveChangesAsync(cancellationToken);
         
         return Result.Success(project.Adapt<ProjectListResponse>());
+    }
+
+    public async Task<Result> UpdateProjectAsync(
+        string projectId,
+        string userId,
+        ProjectRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var project = await _dbContext.Projects
+            .Include(p => p.Technologies)
+            .FirstOrDefaultAsync(p => p.Id == projectId, cancellationToken);
+
+        if (project is null)
+            return Result.Failure(ProjectErrors.NotFound);
+
+        if (project.OwnerId != userId)
+            return Result.Failure(ProjectErrors.Forbidden);
+
+        var isDuplicateName = await _dbContext.Projects
+            .AnyAsync(p => p.Name == request.Name && p.Id != projectId, cancellationToken);
+
+        if (isDuplicateName)
+            return Result.Failure(ProjectErrors.DuplicateName);
+
+        var category = await _dbContext.Categories.FindAsync(request.CategoryId, cancellationToken);
+        if (category is null)
+            return Result.Failure(CategoryErrors.NotFound);
+
+        var technologies = await _dbContext.Technologies
+            .Where(x => request.TechnologyIds.Contains(x.Id))
+            .ToListAsync(cancellationToken);
+
+        if (technologies.Count != request.TechnologyIds.Count)
+            return Result.Failure(TechnologyErrors.NotFound);
+
+        
+        project.Name = request.Name;
+        project.Description = request.Description;
+        project.CategoryId = request.CategoryId;
+        project.Category = category;
+        project.UpdatedAt = DateTime.UtcNow;
+
+        project.Technologies.Clear();
+        project.Technologies = technologies;
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return Result.Success();
     }
 
 }
