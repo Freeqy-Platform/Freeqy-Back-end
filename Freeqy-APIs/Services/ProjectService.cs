@@ -14,9 +14,9 @@ public class ProjectService(ApplicationDbContext dbContext, UserManager<Applicat
     public async Task<Result<ProjectListResponse>> GetProjectsAsync(
         CancellationToken cancellationToken = default)
     {
-        var projectList = await _dbContext.Projects
+        var projectList = await GetActiveProjects()
             .AsNoTracking()
-            .ProjectToType<ProjectListItemResponse>() 
+            .ProjectToType<ProjectListItemResponse>()
             .ToListAsync(cancellationToken);
         return Result.Success(new ProjectListResponse(projectList));
     }
@@ -128,12 +128,12 @@ public class ProjectService(ApplicationDbContext dbContext, UserManager<Applicat
     }
 
     public async Task<Result> UpdateProjectAsync(
-        string projectId,
-        string userId,
-        ProjectRequest request,
-        CancellationToken cancellationToken = default)
+          string projectId,
+          string userId,
+          ProjectRequest request,
+          CancellationToken cancellationToken = default)
     {
-        var project = await _dbContext.Projects
+        var project = await GetActiveProjects()
             .Include(p => p.Technologies)
             .FirstOrDefaultAsync(p => p.Id == projectId, cancellationToken);
 
@@ -143,13 +143,14 @@ public class ProjectService(ApplicationDbContext dbContext, UserManager<Applicat
         if (project.OwnerId != userId)
             return Result.Failure(ProjectErrors.Forbidden);
 
-        var isDuplicateName = await _dbContext.Projects
+        var isDuplicateName = await GetActiveProjects()
             .AnyAsync(p => p.Name == request.Name && p.Id != projectId, cancellationToken);
 
         if (isDuplicateName)
             return Result.Failure(ProjectErrors.DuplicateName);
 
-        var category = await _dbContext.Categories.FindAsync(request.CategoryId, cancellationToken);
+        var category = await _dbContext.Categories.FindAsync(new object[] { request.CategoryId },
+            cancellationToken: cancellationToken);
         if (category is null)
             return Result.Failure(CategoryErrors.NotFound);
 
@@ -160,18 +161,70 @@ public class ProjectService(ApplicationDbContext dbContext, UserManager<Applicat
         if (technologies.Count != request.TechnologyIds.Count)
             return Result.Failure(TechnologyErrors.NotFound);
 
-        
         project.Name = request.Name;
         project.Description = request.Description;
         project.CategoryId = request.CategoryId;
         project.Category = category;
         project.UpdatedAt = DateTime.UtcNow;
+        project.Status = request.Status;
+        project.Visibility = request.Visibility;
+        project.EstimatedTime = request.EstimatedTime;
 
         project.Technologies.Clear();
         project.Technologies = technologies;
 
         await _dbContext.SaveChangesAsync(cancellationToken);
         return Result.Success();
+    }
+
+    
+    public async Task<Result> DeleteProjectAsync(string projectId, string userId,
+        CancellationToken cancellationToken = default)
+    {
+        var project = await GetActiveProjects()
+            .FirstOrDefaultAsync(p => p.Id == projectId, cancellationToken);
+
+        if (project is null)
+            return Result.Failure(ProjectErrors.NotFound);
+
+        if (project.OwnerId != userId)
+            return Result.Failure(ProjectErrors.Forbidden);
+
+        project.DeletedAt = DateTime.UtcNow;
+        project.UpdatedAt = DateTime.UtcNow;
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return Result.Success();
+    }
+
+    public async Task<Result> RestoreProjectAsync(string projectId, string userId,
+    CancellationToken cancellationToken = default)
+    {
+        var project = await _dbContext.Projects
+            .IgnoreQueryFilters() // Bypass soft delete filter to get deleted projects
+            .FirstOrDefaultAsync(p => p.Id == projectId, cancellationToken);
+
+        if (project is null)
+            return Result.Failure(ProjectErrors.NotFound);
+
+        if (project.OwnerId != userId)
+            return Result.Failure(ProjectErrors.Forbidden);
+
+        if (!project.IsDeleted)
+            return Result.Failure(new Error("Project.NotDeleted",
+                "This project has not been deleted", StatusCodes.Status400BadRequest));
+
+        project.DeletedAt = null;
+        project.UpdatedAt = DateTime.UtcNow;
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return Result.Success();
+    }
+
+    
+     private IQueryable<Project> GetActiveProjects()
+    {
+        return _dbContext.Projects.Where(p => p.DeletedAt == null);
     }
 
 }
