@@ -1,9 +1,13 @@
-﻿namespace Freeqy_APIs.Services;
+﻿using Microsoft.EntityFrameworkCore;
+using System.Linq;
 
-public class UserService(UserManager<ApplicationUser> userManager, IWebHostEnvironment environment) : IUserService
+namespace Freeqy_APIs.Services;
+
+public class UserService(UserManager<ApplicationUser> userManager, IWebHostEnvironment environment, ApplicationDbContext context) : IUserService
 {
 	private readonly UserManager<ApplicationUser> _userManager = userManager;
 	private readonly IWebHostEnvironment _environment = environment;
+	private readonly ApplicationDbContext _context = context;
 	private const long MaxFileSize = 5 * 1024 * 1024; // 5MB
 	private static readonly string[] AllowedExtensions = [".jpg", ".jpeg", ".png", ".webp"];
 
@@ -55,12 +59,12 @@ public class UserService(UserManager<ApplicationUser> userManager, IWebHostEnvir
 			new Error(error.Code, error.Description, StatusCodes.Status400BadRequest));
 	}
 
-	public async Task<Result<UserProfileResponse>> GetUserByIdAsync(string userId)
+	public async Task<Result<UserProfileResponse>> GetUserByIdAsync(string userId, CancellationToken cancellationToken = default)
 	{
 		var user = await _userManager.Users
 			.Where(u => u.Id == userId)
 			.ProjectToType<UserProfileResponse>()
-			.SingleOrDefaultAsync();
+			.SingleOrDefaultAsync(cancellationToken);
 
 		if (user is null)
 			return Result.Failure<UserProfileResponse>(UserErrors.UserNotFound);
@@ -68,7 +72,7 @@ public class UserService(UserManager<ApplicationUser> userManager, IWebHostEnvir
 		return Result.Success(user);
 	}
 
-	public async Task<Result<IEnumerable<UserProfileResponse>>> GetAllAsync(UserProfileRequestFilter profileRequestFilter, CancellationToken cancellationToken)
+	public async Task<Result<IEnumerable<UserProfileResponse>>> GetAllAsync(UserProfileRequestFilter profileRequestFilter, CancellationToken cancellationToken = default)
 	{
 		var query = _userManager.Users.AsQueryable();
 
@@ -179,6 +183,89 @@ public class UserService(UserManager<ApplicationUser> userManager, IWebHostEnvir
 
 		// 10. Return success response
 		var response = new UploadPhotoResponse(photoUrl, "Profile photo uploaded successfully");
+		return Result.Success(response);
+	}
+
+	public async Task<Result<UserProfileResponse>> UpdateSkillsAsync(string userId, UpdateUserSkillsRequest skillsRequest, CancellationToken cancellationToken = default)
+	{
+		var user = await _userManager.Users
+			.Include(u => u.Skills)
+			.ThenInclude(us => us.Skill)
+			.SingleOrDefaultAsync(u => u.Id == userId, cancellationToken);
+
+		if (user is null)
+			return Result.Failure<UserProfileResponse>(UserErrors.UserNotFound);
+
+		var currentSkills = await _context.UserSkills
+			.Where(us => us.UserId == userId)
+			.ToListAsync(cancellationToken);
+
+		var submittedSkillNames = skillsRequest.Skills
+			.Select(s => s.Trim())
+			.Where(s => !string.IsNullOrEmpty(s))
+			.ToList() ?? [];
+		
+		var existingSkills = user.Skills
+			.Where(us => us.Skill is not null)
+			.Select(us => us.Skill!.Name)
+			.ToList();
+
+		var newSkills = submittedSkillNames.Except(existingSkills);
+
+		var currentSkillNames = currentSkills
+			.Where(us => us.Skill != null)
+			.Select(us => us.Skill!.Name)
+			.ToList();
+
+		var removedSkillNames = currentSkillNames
+			.Except(submittedSkillNames, StringComparer.OrdinalIgnoreCase)
+			.ToList();
+
+		if (newSkills.Any())
+		{
+			var existingSkillsInDb = await _context.Skills
+				.Where(s => newSkills.Contains(s.Name))
+				.ToListAsync(cancellationToken);
+
+			var skillsToCreate = newSkills
+				.Except(existingSkillsInDb.Select(s => s.Name), StringComparer.OrdinalIgnoreCase)
+				.ToList();
+
+			foreach (var skill in skillsToCreate)
+			{
+				_context.Skills.Add(new Skill { Name =  skill});
+				existingSkillsInDb.Add(new Skill { Name = skill });
+			}
+
+			await _context.SaveChangesAsync(cancellationToken);
+
+			var skillsToAdd = await _context.Skills
+				.Where(s => newSkills.Contains(s.Name))
+				.ToListAsync(cancellationToken);
+
+			skillsToAdd.ForEach(skill => _context.UserSkills.Add(new UserSkill
+			{
+				UserId = user.Id,
+				SkillId = skill.Id
+			}));
+
+			await _context.SaveChangesAsync(cancellationToken);
+		}
+
+		if (!submittedSkillNames.Any())
+		{
+			await _context.UserSkills
+				.Where(us => us.UserId == userId)
+				.ExecuteDeleteAsync(cancellationToken);
+
+			await _context.SaveChangesAsync(cancellationToken);
+		}
+
+		await _context.UserSkills
+			.Where(us => us.UserId == userId && removedSkillNames.Contains(us.Skill!.Name))
+			.ExecuteDeleteAsync(cancellationToken);
+
+		var response = user.Adapt<UserProfileResponse>();
 		return Result.Success(response);
 	}
 }

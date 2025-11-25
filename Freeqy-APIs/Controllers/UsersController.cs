@@ -60,4 +60,12 @@ public class UsersController(IUserService userService) : ControllerBase
 
 		return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
 	}
+
+	[HttpPost("me/skills")]
+	public async Task<IActionResult> UpdateSkills([FromBody] UpdateUserSkillsRequest SkillsRequest, CancellationToken cancellationToken)
+	{
+		var result = await _userService.UpdateSkillsAsync(User.GetUserId()!, SkillsRequest, cancellationToken);
+
+		return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
+	}
 }
