@@ -30,4 +30,10 @@ public interface IProjectService
 
     Task<Result> UpdateProjectAsync(string projectId, string userId, ProjectRequest request,
         CancellationToken cancellationToken = default);
+
+    Task<Result> DeleteProjectAsync(string projectId, string userId,
+        CancellationToken cancellationToken = default);
+
+    public Task<Result> RestoreProjectAsync(string projectId, string userId,
+        CancellationToken cancellationToken = default);
 }

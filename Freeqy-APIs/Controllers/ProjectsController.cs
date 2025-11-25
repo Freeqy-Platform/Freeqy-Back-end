@@ -30,6 +30,24 @@ public class ProjectsController(IProjectService projectService) : ControllerBase
         return result.IsSuccess ? Ok() : result.ToProblem();
     }
 
+
+    [HttpDelete("{projectId}")]
+    [Authorize]
+    public async Task<IActionResult> DeleteProject(string projectId, CancellationToken cancellationToken)
+    {
+        var result = await _projectService.DeleteProjectAsync(projectId, User.GetUserId()!, cancellationToken);
+        return result.IsSuccess ? NoContent() : result.ToProblem();
+    }
+
+    
+    [HttpPost("{projectId}/restore")]
+    [Authorize]
+    public async Task<IActionResult> RestoreProject(string projectId, CancellationToken cancellationToken)
+    {
+        var result = await _projectService.RestoreProjectAsync(projectId, User.GetUserId()!, cancellationToken);
+        return result.IsSuccess ? Ok() : result.ToProblem();
+    }
+
     [HttpPost("technologies")]
     public async Task<IActionResult> AddTechnology([FromBody] TechnologyRequest technologyRequest,
         CancellationToken cancellationToken)

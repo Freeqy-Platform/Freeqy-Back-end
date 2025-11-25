@@ -35,4 +35,6 @@ public class Project
     // Navigation properties
     public ICollection<ProjectMembers> ProjectMembers { get; set; } =[];
     public List<Technology> Technologies { get; set; } = new();
+    public DateTime? DeletedAt { get; set; } = null;
+    public bool IsDeleted => DeletedAt.HasValue;
 }
