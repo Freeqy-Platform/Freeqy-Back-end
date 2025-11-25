@@ -1,27 +1,22 @@
 namespace Freeqy_APIs.Contracts.Projects;
 
 public record SimpleUserDto(
-    string UserId,
+    string Id,
     string Name
 );
 
 public record CategoryDto(
-    string CategoryId,
-    string Name
-);
-
-public record TagDto(
-    string TagId,
+    string Id,
     string Name
 );
 
 public record TechnologyDto(
-    string TechnologyId,
+    string Id,
     string Name
 );
 
 public record ProjectListItemResponse(
-    string ProjectId,
+    string Id,
     string Name,
     string Description,
     SimpleUserDto Owner,
@@ -29,7 +24,6 @@ public record ProjectListItemResponse(
     string Status,
     string Visibility,
     string EstimatedTime,
-    IReadOnlyList<TagDto> Tags,
     IReadOnlyList<TechnologyDto> Technologies,
     int MembersCount,
     DateTime CreatedAt,
