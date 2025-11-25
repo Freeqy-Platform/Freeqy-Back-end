@@ -1,9 +1,9 @@
 namespace Freeqy_APIs.Entities;
 
-public class Technologies
+public class Technology
 {
     public string Id { set; get; }
     public string Name { set; get; }
     
-    public IEnumerable<Projects> Projects { set; get; } =  new List<Projects>();
+    public IEnumerable<Project> Projects { set; get; } =  new List<Project>();
 }

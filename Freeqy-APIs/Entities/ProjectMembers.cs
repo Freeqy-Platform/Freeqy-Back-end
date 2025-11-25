@@ -14,7 +14,7 @@ public class ProjectMembers
     public string UserId { get; set; }
     
     [ForeignKey("ProjectId")]
-    public Projects Project { get; set; }
+    public Project Project { get; set; }
     
     [ForeignKey("UserId")]
     public ApplicationUser User { get; set; }

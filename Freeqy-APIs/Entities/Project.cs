@@ -2,17 +2,17 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Freeqy_APIs.Entities;
 
-public class Projects
+public class Project
 {
     public string Id { get; set; }
     public string Name { get; set; }
     public string Description { get; set; }
 
     // Representing status as string (e.g. "InProgress", "Completed")
-    public string Status { get; set; }
+    public ProjectStatus Status { get; set; } = ProjectStatus.Pending;
 
     // Representing visibility as string (e.g. "Public", "Private")
-    public string Visibility { get; set; }
+    public ProjectVisibility Visibility { get; set; } =  ProjectVisibility.Public;
 
     // Owner of the project
     public string OwnerId { get; set; }
@@ -20,17 +20,19 @@ public class Projects
     [ForeignKey(nameof(OwnerId))]
     public ApplicationUser Owner { get; set; }
 
-    public string EstimatedTime { get; set; }
+    public TimeSpan EstimatedTime { get; set; }
 
-    public DateTime CreatedAt { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; }
 
     public string CategoryId { get; set; }
-
+    
     [ForeignKey(nameof(CategoryId))]
-    public Categories Category { get; set; }
+    public Category Category { get; set; }
+    
+    // public ProjectCategory Category { get; set; }
 
     // Navigation properties
     public ICollection<ProjectMembers> ProjectMembers { get; set; } =[];
-    public IEnumerable<Technologies> Technologies { get; set; } = [];
+    public IEnumerable<Technology> Technologies { get; set; } = [];
 }

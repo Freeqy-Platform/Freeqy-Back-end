@@ -11,13 +11,12 @@ public class MappingConfigurations : IRegister
         config.NewConfig<ApplicationUser, SimpleUserDto>()
             .Map(dest => dest.Name, src => src.FirstName + " " + src.LastName);
 
-         config.NewConfig<Projects, ProjectListItemResponse>()  
+         config.NewConfig<Project, ProjectListItemResponse>()  
               .Map(dest => dest.Owner, src => src.Owner.Adapt<SimpleUserDto>())
               .Map(dest => dest.Category, src => src.Category.Adapt<CategoryDto>())
               .Map(dest => dest.Technologies, src => src.Technologies.Select(t => t.Adapt<TechnologyDto>()).ToList())
               .Map(dest => dest.MembersCount, src => src.ProjectMembers.Count);
-
-
+         
 
         config.NewConfig<ApplicationUser, UserProfileResponse>()
 	        .Map(dest => dest.Track, src => src.Track!.Name)
