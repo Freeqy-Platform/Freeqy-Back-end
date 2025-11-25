@@ -201,7 +201,6 @@ public class ProjectService(ApplicationDbContext dbContext, UserManager<Applicat
     CancellationToken cancellationToken = default)
     {
         var project = await _dbContext.Projects
-            .IgnoreQueryFilters() // Bypass soft delete filter to get deleted projects
             .FirstOrDefaultAsync(p => p.Id == projectId, cancellationToken);
 
         if (project is null)
@@ -211,8 +210,7 @@ public class ProjectService(ApplicationDbContext dbContext, UserManager<Applicat
             return Result.Failure(ProjectErrors.Forbidden);
 
         if (!project.IsDeleted)
-            return Result.Failure(new Error("Project.NotDeleted",
-                "This project has not been deleted", StatusCodes.Status400BadRequest));
+            return Result.Failure(ProjectErrors.NotDeleted);
 
         project.DeletedAt = null;
         project.UpdatedAt = DateTime.UtcNow;

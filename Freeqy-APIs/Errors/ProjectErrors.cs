@@ -11,4 +11,7 @@ public class ProjectErrors
     public static readonly Error Forbidden =
         new("Project.Forbidden", "You do not have permission to modify this project", 
             StatusCodes.Status403Forbidden);
+    public static readonly Error NotDeleted =
+        new("Project.NotDeleted", "This project has not been deleted", 
+            StatusCodes.Status400BadRequest);
 }
