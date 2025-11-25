@@ -3,23 +3,18 @@ using Freeqy_APIs.Entities;
 
 namespace Freeqy_APIs.Services;
 
-public class ProjectService(ApplicationDbContext dbContext, IMapper mapper) : IProjectService
+public class ProjectService(ApplicationDbContext dbContext) : IProjectService
 {
     private readonly ApplicationDbContext _dbContext = dbContext;
-    private readonly IMapper _mapper = mapper;
-
     public async Task<Result<ProjectListResponse>> GetProjectsAsync(
         CancellationToken cancellationToken = default)
     {
-        var projectList = await _dbContext.Set<Projects>()
+        var projectList = await _dbContext.Projects
             .AsNoTracking()
-            .Include(p => p.Category)
-            .Include(p => p.Owner)
-            .Include(p => p.ProjectMembers)
-            .Include(p => p.Technologies)
-            .ProjectToType<ProjectListItemResponse>()
+            .ProjectToType<ProjectListItemResponse>() 
             .ToListAsync(cancellationToken);
-
         return Result.Success(new ProjectListResponse(projectList));
     }
+
+
 }
