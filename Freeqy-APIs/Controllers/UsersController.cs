@@ -45,9 +45,10 @@ public class UsersController(IUserService userService) : ControllerBase
 
 	[HttpPost("me/photo")]
 	[RequestSizeLimit(5 * 1024 * 1024)] // 5MB limit
-	public async Task<IActionResult> UploadMyPhoto([FromForm] IFormFile photo)
+	[Consumes("multipart/form-data")]
+	public async Task<IActionResult> UploadMyPhoto([FromForm] UploadPhotoRequest request)
 	{
-		var result = await _userService.UploadUserPhotoAsync(User.GetUserId()!, photo);
+		var result = await _userService.UploadUserPhotoAsync(User.GetUserId()!, request.Photo);
 
 		return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
 	}

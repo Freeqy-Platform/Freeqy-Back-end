@@ -15,14 +15,46 @@ public static class Dependenceies
 
         services.AddDbContext<ApplicationDbContext>(options => options.UseSqlServer(connectionString));
 
-        // Add swagger
-        services.AddSwaggerGen();
+        // Add swagger with proper configuration
+        services.AddEndpointsApiExplorer();
+        services.AddSwaggerGen(options =>
+        {
+            options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+            {
+                Title = "Freeqy Platform API",
+                Version = "v1",
+                Description = "Backend API for team formation and project management"
+            });
+            
+            // Add JWT Authentication to Swagger
+            options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Name = "Authorization",
+                Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+                Scheme = "Bearer",
+                BearerFormat = "JWT",
+                In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+                Description = "Enter 'Bearer' [space] and then your token"
+            });
+
+            options.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+            {
+                {
+                    new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+                    {
+                        Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                        {
+                            Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                            Id = "Bearer"
+                        }
+                    },
+                    Array.Empty<string>()
+                }
+            });
+        });
 
         //Add Mapster
         services.AddMapsterDependcy();
-
-        // Add Password Reset Services
-        // services.AddPasswordResetServices();
         
         services.AddScoped<IAuthService, AuthService>();
         services.AddSingleton<IJwtProvider, JwtProvider>();
@@ -39,21 +71,6 @@ public static class Dependenceies
         return services;
     }
 
-    private static IServiceCollection AddSwaggerDependency(this IServiceCollection services)
-    {
-        services.AddEndpointsApiExplorer();
-        services.AddSwaggerGen(options =>
-        {
-            options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
-            {
-                Title = "Freeqy Platform API",
-                Version = "v1",
-                Description = "Backend API for team formation and project management"
-            });
-        });
-        return  services;
-    }
-
     private static IServiceCollection AddMapsterDependcy(this IServiceCollection services)
     {
         var mappingConfig = TypeAdapterConfig.GlobalSettings;
@@ -62,17 +79,6 @@ public static class Dependenceies
         services.AddSingleton<IMapper>(new Mapper(mappingConfig));
         return  services;
     }
-
-    // private static IServiceCollection AddPasswordResetServices(this IServiceCollection services)
-    // {
-    //
-    //     // Register Mock Repositories as SINGLETON to maintain in-memory state across requests
-    //     // When replaced with real EF Core implementations, change back to Scoped
-    //     services.AddSingleton<IUserRepository, MockUserRepository>();
-    //     services.AddSingleton<IPasswordResetTokenRepository, MockPasswordResetTokenRepository>();
-    //
-    //     return services;
-    // }
 
     public static IServiceCollection AddFluentValidation(this IServiceCollection services)
     {

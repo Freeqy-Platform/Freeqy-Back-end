@@ -34,12 +34,12 @@ if (Environment.GetEnvironmentVariable("RUN_MIGRATIONS_ON_STARTUP") == "true")
 }
 // =========================================================== 
 
-// Serve static files (for user profile photos)
-
-app.MapStaticAssets();
-
 app.UseHttpsRedirection();
 
+// Serve static files (for user profile photos)
+app.MapStaticAssets();
+
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
