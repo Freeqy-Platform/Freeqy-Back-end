@@ -34,5 +34,5 @@ public class Project
 
     // Navigation properties
     public ICollection<ProjectMembers> ProjectMembers { get; set; } =[];
-    public IEnumerable<Technology> Technologies { get; set; } = [];
+    public List<Technology> Technologies { get; set; } = new();
 }

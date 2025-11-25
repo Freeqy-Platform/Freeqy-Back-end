@@ -23,6 +23,12 @@ public class ProjectsController(IProjectService projectService) : ControllerBase
         var result = await _projectService.AddProjectAsync( User.GetUserId()!,projectRequest, cancellationToken);
         return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
     }
+    [HttpPut("{projectId}")]
+    public async Task<IActionResult> UpdateProject(string projectId, [FromBody] ProjectRequest projectRequest, CancellationToken cancellationToken)
+    {
+        var result = await _projectService.UpdateProjectAsync(projectId,User.GetUserId()!, projectRequest, cancellationToken);
+        return result.IsSuccess ? Ok() : result.ToProblem();
+    }
 
     [HttpPost("technologies")]
     public async Task<IActionResult> AddTechnology([FromBody] TechnologyRequest technologyRequest,
