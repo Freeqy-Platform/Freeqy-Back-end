@@ -15,8 +15,8 @@ public sealed class ApplicationUser : IdentityUser
 	public Track? Track { get; set; }
 	public IEnumerable<RefreshToken> RefreshTokens { get; set; } = [];
 	public IEnumerable<UserSkill> Skills { set; get; } = [];
-	public string LastName { get; set; } = string.Empty;
+	
 	public string? PhotoUrl { get; set; }
     
-	public IEnumerable<RefreshToken> RefreshTokens { get; set; } = [];
+	
 }

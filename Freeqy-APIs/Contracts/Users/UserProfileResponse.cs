@@ -6,8 +6,8 @@ public record UserProfileResponse(
 	string UserName,
 	string FirstName,
 	string LastName,
-	string? PhotoUrl
-	string LastName,
+	string? PhotoUrl,
+	
 	string? Track,
 	IEnumerable<SkillResponse>? Skills
 );
