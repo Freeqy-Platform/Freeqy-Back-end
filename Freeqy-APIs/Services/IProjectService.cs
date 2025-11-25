@@ -27,4 +27,7 @@ public interface IProjectService
 
     Task<Result<ProjectListResponse>> AddProjectAsync(string userId, ProjectRequest request,
         CancellationToken cancellationToken = default);
+
+    Task<Result> UpdateProjectAsync(string projectId, string userId, ProjectRequest request,
+        CancellationToken cancellationToken = default);
 }

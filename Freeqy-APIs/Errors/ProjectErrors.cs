@@ -8,4 +8,7 @@ public class ProjectErrors
     
     public static readonly Error NotFound =
         new("Project.NotFound", "Project not found", StatusCodes.Status404NotFound);
+    public static readonly Error Forbidden =
+        new("Project.Forbidden", "You do not have permission to modify this project", 
+            StatusCodes.Status403Forbidden);
 }
