@@ -36,4 +36,7 @@ public interface IProjectService
 
     public Task<Result> RestoreProjectAsync(string projectId, string userId,
         CancellationToken cancellationToken = default);
+
+    public Task<Result> ChangeProjectVisibilityAsync(string projectId, string userId,CancellationToken cancellationToken = default);
+        
 }

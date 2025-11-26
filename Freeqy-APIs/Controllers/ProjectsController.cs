@@ -18,6 +18,7 @@ public class ProjectsController(IProjectService projectService) : ControllerBase
     }
 
     [HttpPost]
+    [Authorize]
     public async Task<IActionResult> AddProject([FromBody] ProjectRequest projectRequest, CancellationToken cancellationToken)
     {
         var result = await _projectService.AddProjectAsync( User.GetUserId()!,projectRequest, cancellationToken);
@@ -45,6 +46,13 @@ public class ProjectsController(IProjectService projectService) : ControllerBase
     public async Task<IActionResult> RestoreProject(string projectId, CancellationToken cancellationToken)
     {
         var result = await _projectService.RestoreProjectAsync(projectId, User.GetUserId()!, cancellationToken);
+        return result.IsSuccess ? Ok() : result.ToProblem();
+    }
+    [HttpPatch("{projectId}/change-visibility")]
+    [Authorize]
+    public async Task<IActionResult> ChangeProjectVisibility(string projectId, CancellationToken cancellationToken)
+    {
+        var result = await _projectService.ChangeProjectVisibilityAsync(projectId, User.GetUserId()!, cancellationToken);
         return result.IsSuccess ? Ok() : result.ToProblem();
     }
 

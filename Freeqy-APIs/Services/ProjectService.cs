@@ -218,11 +218,33 @@ public class ProjectService(ApplicationDbContext dbContext, UserManager<Applicat
         await _dbContext.SaveChangesAsync(cancellationToken);
         return Result.Success();
     }
+    public async Task<Result> ChangeProjectVisibilityAsync(string projectId, string userId, CancellationToken cancellationToken = default)
+    {
+        var project = await GetActiveProjects()
+          .FirstOrDefaultAsync(p => p.Id == projectId, cancellationToken);
 
-    
-     private IQueryable<Project> GetActiveProjects()
+        if (project is null)
+            return Result.Failure(ProjectErrors.NotFound);
+
+        if (project.OwnerId != userId)
+            return Result.Failure(ProjectErrors.Forbidden);
+
+        if (project.Visibility == ProjectVisibility.Public)
+            project.Visibility = ProjectVisibility.Private;
+        else
+            project.Visibility = ProjectVisibility.Public;
+
+        project.UpdatedAt = DateTime.UtcNow;
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return Result.Success();
+    }
+
+
+    private IQueryable<Project> GetActiveProjects()
     {
         return _dbContext.Projects.Where(p => p.DeletedAt == null);
     }
 
+   
 }
