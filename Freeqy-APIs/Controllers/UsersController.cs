@@ -68,4 +68,12 @@ public class UsersController(IUserService userService) : ControllerBase
 
 		return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
 	}
+
+	[HttpPut("me/social-links")]
+	public async Task<IActionResult> UpdateSocialLinks([FromBody] UpdateSocialLinksRequest request, CancellationToken cancellationToken)
+	{
+		var result = await _userService.UpdateSocialLinksAsync(User.GetUserId()!, request, cancellationToken);
+
+		return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
+	}
 }

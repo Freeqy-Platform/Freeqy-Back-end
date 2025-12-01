@@ -268,4 +268,45 @@ public class UserService(UserManager<ApplicationUser> userManager, IWebHostEnvir
 		var response = user.Adapt<UserProfileResponse>();
 		return Result.Success(response);
 	}
+
+	public async Task<Result<UserProfileResponse>> UpdateSocialLinksAsync(string userId, UpdateSocialLinksRequest request, CancellationToken cancellationToken = default)
+	{
+		var user = await _userManager.Users
+			.Include(u => u.SocialMediaLinks)
+			.SingleOrDefaultAsync(u => u.Id == userId, cancellationToken);
+
+		if (user is null)
+			return Result.Failure<UserProfileResponse>(UserErrors.UserNotFound);
+
+		var submittedLinks = request.SocialLinks
+			.Where(sl => !string.IsNullOrWhiteSpace(sl.Platform) && !string.IsNullOrWhiteSpace(sl.Link))
+			.Select(sl => new { Platform = sl.Platform.Trim(), Link = sl.Link.Trim() })
+			.ToList();
+
+		await _context.UserSocialMedia
+			.Where(usm => usm.UserId == userId)
+			.ExecuteDeleteAsync(cancellationToken);
+
+		foreach (var link in submittedLinks)
+		{
+			_context.UserSocialMedia.Add(new UserSocialMedia
+			{
+				UserId = userId,
+				Platform = link.Platform,
+				Link = link.Link
+			});
+		}
+
+		await _context.SaveChangesAsync(cancellationToken);
+
+		var updatedUser = await _userManager.Users
+			.Include(u => u.SocialMediaLinks)
+			.Include(u => u.Skills)
+			.ThenInclude(us => us.Skill)
+			.Include(u => u.Track)
+			.SingleAsync(u => u.Id == userId, cancellationToken);
+
+		var response = updatedUser.Adapt<UserProfileResponse>();
+		return Result.Success(response);
+	}
 }

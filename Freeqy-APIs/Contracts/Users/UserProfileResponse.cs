@@ -9,5 +9,6 @@ public record UserProfileResponse(
 	string? PhotoUrl,
 	
 	string? Track,
-	IEnumerable<SkillResponse>? Skills
+	IEnumerable<SkillResponse>? Skills,
+	IEnumerable<SocialMediaLinkDto>? SocialLinks
 );

@@ -4,16 +4,14 @@ namespace Freeqy_APIs.Entities;
 
 public class UserSocialMedia
 {
-    public string Id { get; set; }
+    public long Id { get; set; }
 
-    public string UserId { get; set; }
+    public string UserId { get; set; } = string.Empty;
 
-    // e.g. "GitHub", "LinkedIn"
-    public string Platform { get; set; }
+    public string Platform { get; set; } = string.Empty;
 
-    // Profile or account URL
-    public string Url { get; set; }
+    public string Link { get; set; } = string.Empty;
 
     [ForeignKey("UserId")]
-    public ApplicationUser User { get; set; }
+    public ApplicationUser User { get; set; } = default!;
 }
