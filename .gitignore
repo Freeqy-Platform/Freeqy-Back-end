@@ -76,8 +76,7 @@ Migrations/
 # Don’t ignore appsettings.json (important for app config),
 # but ignore local overrides:
 appsettings.Development.json
-appsettings.Local.json
-appsettings.*.local.json
+!appsettings.json
 
 # ---------------------------
 # Other
@@ -109,3 +108,8 @@ docker-compose.override.yml
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# ---------------------------
+# Me
+# ---------------------------
+global.json
