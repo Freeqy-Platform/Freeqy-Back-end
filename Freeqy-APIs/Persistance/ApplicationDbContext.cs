@@ -20,12 +20,13 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         builder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
 
 
-        // Prevent multiple cascade paths in SQL Server by disabling cascade delete on ProjectMembers -> Project
+        /* Prevent multiple cascade paths in SQL Server by disabling cascade delete on ProjectMembers -> Project
         builder.Entity<ProjectMembers>()
             .HasOne(pm => pm.Project)
             .WithMany()
             .HasForeignKey(pm => pm.ProjectId)
             .OnDelete(DeleteBehavior.Restrict);
+            */
 
         base.OnModelCreating(builder);
     }
