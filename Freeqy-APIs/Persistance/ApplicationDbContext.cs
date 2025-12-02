@@ -6,7 +6,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Project> Projects { get; set; }
     public DbSet<Category> Categories { get; set; }
     public DbSet<ProjectMembers> ProjectMembers { get; set; }
-    // public DbSet<ProjectTechnologies> ProjectTechnologies { get; set; }
+    public DbSet<ProjectInvitation> ProjectInvitations { get; set; }
     public DbSet<Technology> Technologies { get; set; }
     public DbSet<Tags> Tags { get; set; }
     public DbSet<UserTags> UserTags { get; set; }

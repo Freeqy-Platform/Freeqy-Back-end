@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Invitation</title>
+    <style>
+        body { 
+            font-family: 'Inter', Arial, sans-serif; 
+            background-color: #f8fafc; 
+            margin: 0;
+            padding: 0;
+        }
+        .container { 
+            max-width: 600px; 
+            margin: 0 auto; 
+            background: white; 
+            border-radius: 8px; 
+        }
+        .header { 
+            padding: 20px; 
+            text-align: center; 
+            border-bottom: 1px solid #e5e7eb; 
+        }
+        .header h1 {
+            color: #1f2937;
+            margin: 0;
+        }
+        .content { 
+            padding: 40px 20px; 
+        }
+        .content p {
+            color: #374151;
+            line-height: 1.6;
+        }
+        .project-details { 
+            background: #f3f4f6; 
+            padding: 20px; 
+            border-radius: 6px; 
+            margin: 20px 0; 
+        }
+        .project-details h3 {
+            margin-top: 0;
+            color: #1f2937;
+        }
+        .project-details p {
+            margin: 10px 0;
+        }
+        .button { 
+            display: inline-block; 
+            padding: 12px 24px; 
+            background: #3b82f6; 
+            color: white !important; 
+            text-decoration: none; 
+            border-radius: 6px; 
+            margin-top: 20px; 
+        }
+        .button:hover {
+            background: #2563eb;
+        }
+        .footer { 
+            text-align: center; 
+            padding: 20px; 
+            font-size: 12px; 
+            color: #6b7280; 
+            border-top: 1px solid #e5e7eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Project Invitation</h1>
+        </div>
+        <div class="content">
+            <p>Hi there,</p>
+            <p><strong>{{senderName}}</strong> has invited you to join a project on Freeqy!</p>
+            
+            <div class="project-details">
+                <h3>{{projectName}}</h3>
+                <p>{{projectDescription}}</p>
+                <p><strong>Invitation expires:</strong> {{expiryDate}}</p>
+            </div>
+            
+            <p>Click the button below to accept or decline the invitation:</p>
+            <a href="{{acceptLink}}" class="button">View Invitation</a>
+            
+            <p style="margin-top: 30px; color: #6b7280; font-size: 14px;">
+                If you didn't expect this invitation, you can ignore this email.
+            </p>
+        </div>
+        <div class="footer">
+            <p>© 2025 Freeqy Platform. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>
