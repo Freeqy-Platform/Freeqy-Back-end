@@ -61,6 +61,7 @@ public static class Dependenceies
         services.AddScoped<IEmailSender, EmailService>();
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<IProjectService, ProjectService>();
+        services.AddScoped<IProjectInvitationService, ProjectInvitationService>();
         services.AddFluentValidation();
         
         services.AddHttpContextAccessor();
