@@ -7,6 +7,9 @@ public class ProjectErrors
             StatusCodes.Status409Conflict);
     public static readonly Error NotFound =
         new("Project.NotFound", "Project not found", StatusCodes.Status404NotFound);
+    public static readonly Error MemberNotFound =
+        new("Project.MemberNotFound", "The specified member is not part of this project", 
+            StatusCodes.Status404NotFound);
     public static readonly Error Forbidden =
         new("Project.Forbidden", "You do not have permission to modify this project", 
             StatusCodes.Status403Forbidden);

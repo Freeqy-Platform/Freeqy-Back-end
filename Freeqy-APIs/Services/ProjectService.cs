@@ -246,5 +246,26 @@ public class ProjectService(ApplicationDbContext dbContext, UserManager<Applicat
         return _dbContext.Projects.Where(p => p.DeletedAt == null);
     }
 
-   
+    public async Task<Result> RemoveMemberFromProject(string projectId, string userId, string memberId, CancellationToken cancellationToken = default)
+    {
+        var project = await GetActiveProjects()
+         .FirstOrDefaultAsync(p => p.Id == projectId, cancellationToken);
+
+        if (project is null)
+            return Result.Failure(ProjectErrors.NotFound); 
+
+        if (project.OwnerId != userId)
+            return Result.Failure(ProjectErrors.Forbidden);
+
+        var projectMember = await _dbContext.ProjectMembers.FirstOrDefaultAsync(pm => pm.ProjectId == projectId && pm.UserId == memberId, cancellationToken);
+
+        if (projectMember is null)
+            return Result.Failure(ProjectErrors.MemberNotFound);
+
+          _dbContext.ProjectMembers.Remove(projectMember);
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return Result.Success();
+
+    }
 }
