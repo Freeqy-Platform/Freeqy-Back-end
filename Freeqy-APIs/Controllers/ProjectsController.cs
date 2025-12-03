@@ -107,4 +107,13 @@ public class ProjectsController(IProjectService projectService) : ControllerBase
         var result = await _projectService.GetCategoryByIdAsync(id, cancellationToken);
         return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
     }
+    [HttpDelete("{projectId}/members/{memberId}")]
+    [Authorize]
+    public async Task<IActionResult> RemoveMemberFromProject(string projectId, string memberId,
+        CancellationToken cancellationToken)
+    {
+        var result = await _projectService.RemoveMemberFromProject(projectId, User.GetUserId()!, memberId,
+            cancellationToken);
+        return result.IsSuccess ? NoContent() : result.ToProblem();
+    }
 }
