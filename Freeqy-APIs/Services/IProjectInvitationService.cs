@@ -10,6 +10,10 @@ public interface IProjectInvitationService
         string userId,
         CancellationToken cancellationToken = default);
 
+    Task<Result<ProjectInvitationsResponse>> GetProjectInvitationsAsync(string userId,
+        string projectId,
+        CancellationToken cancellationToken = default);
+
     Task<Result<InvitationDetailResponse>> GetInvitationDetailsAsync(
         string invitationId,
         CancellationToken cancellationToken = default);

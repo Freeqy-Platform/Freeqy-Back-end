@@ -42,3 +42,6 @@ public record UserInvitationsResponse(
     IReadOnlyList<InvitationDetailResponse> PendingInvitations,
     IReadOnlyList<InvitationDetailResponse> RespondedInvitations
 );
+public record ProjectInvitationsResponse(
+    IReadOnlyList<InvitationDetailResponse> Invitations
+);
