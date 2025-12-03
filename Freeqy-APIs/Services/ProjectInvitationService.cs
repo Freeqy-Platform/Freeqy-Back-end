@@ -258,6 +258,27 @@ public class ProjectInvitationService(ApplicationDbContext dbContext,UserManager
         return Result.Success();
     }
 
+    public async Task<Result<ProjectInvitationsResponse>> GetProjectInvitationsAsync(string userId, string projectId, CancellationToken cancellationToken = default)
+    {
+        var ProjectExists = await _dbContext.Projects
+            .AnyAsync(p => p.Id == projectId && p.DeletedAt == null && p.OwnerId == userId, cancellationToken);
+
+        if (!ProjectExists)
+            return Result.Failure<ProjectInvitationsResponse>(ProjectErrors.NotFound);
+
+        var invitations = await _dbContext.ProjectInvitations
+            .Include(pi => pi.SentByUser)
+            .Where(pi => pi.ProjectId == projectId)
+            .OrderByDescending(pi => pi.CreatedAt)
+            .Select(pi => MapToInvitationDetailResponse(pi))
+            .ToListAsync(cancellationToken);
+
+        var response = new ProjectInvitationsResponse(
+            Invitations: invitations
+        );
+        return Result.Success(response);
+    }
+
     private async Task<Result> SendInvitationEmailAsync(
         ProjectInvitation invitation,
         Project project,
@@ -301,4 +322,6 @@ public class ProjectInvitationService(ApplicationDbContext dbContext,UserManager
                 : "Unknown"
         );
     }
+
+  
 }
