@@ -1,7 +1,10 @@
+using Microsoft.AspNetCore.RateLimiting;
+
 namespace Freeqy_APIs.Controllers;
 
 [ApiController]
 [Route("api/v1/[controller]")]
+[EnableRateLimiting("authentication")]
 public class AuthController(ILogger<AuthController> logger,
     IAuthService authService) : ControllerBase
 {

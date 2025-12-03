@@ -39,6 +39,9 @@ app.UseHttpsRedirection();
 // Serve static files (for user profile photos)
 app.MapStaticAssets();
 
+// Add Rate Limiting Middleware (before Authentication)
+app.UseRateLimiter();
+
 app.UseAuthentication();
 app.UseAuthorization();
 

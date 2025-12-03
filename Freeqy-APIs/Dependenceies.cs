@@ -1,5 +1,6 @@
 using Freeqy_APIs.Configrautions;
 using Microsoft.AspNetCore.Identity.UI.Services;
+using System.Threading.RateLimiting;
 
 namespace Freeqy_APIs;
 
@@ -69,6 +70,9 @@ public static class Dependenceies
         // Configure Mail
         services.Configure<MailConfig>(configuration.GetSection(nameof(MailConfig)));
 
+        // Add Rate Limiting
+        services.AddRateLimitingConfig(configuration);
+
         return services;
     }
 
@@ -127,6 +131,92 @@ public static class Dependenceies
             options.Password.RequiredLength = 8;
             options.SignIn.RequireConfirmedEmail = true;
             options.User.RequireUniqueEmail = true;
+        });
+
+        return services;
+    }
+
+    private static IServiceCollection AddRateLimitingConfig(this IServiceCollection services, IConfiguration configuration)
+    {
+        var rateLimitOptions = configuration.GetSection(RateLimitingOptions.SectionName).Get<RateLimitingOptions>() 
+            ?? new RateLimitingOptions();
+
+        services.AddRateLimiter(options =>
+        {
+            options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+            // Global Rate Limiter - applies to all endpoints
+            options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
+            {
+                var userId = context.User.Identity?.IsAuthenticated == true
+                    ? context.User.GetUserId()
+                    : context.Connection.RemoteIpAddress?.ToString();
+
+                return RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey: userId ?? "anonymous",
+                    factory: _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = rateLimitOptions.Global.PermitLimit,
+                        Window = TimeSpan.FromSeconds(rateLimitOptions.Global.Window),
+                        QueueLimit = rateLimitOptions.Global.QueueLimit
+                    });
+            });
+
+            // Authentication Rate Limiter - for login/register endpoints
+            options.AddPolicy("authentication", context =>
+            {
+                var ipAddress = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+                
+                return RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey: ipAddress,
+                    factory: _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = rateLimitOptions.Authentication.PermitLimit,
+                        Window = TimeSpan.FromSeconds(rateLimitOptions.Authentication.Window),
+                        QueueLimit = rateLimitOptions.Authentication.QueueLimit
+                    });
+            });
+
+            // API Rate Limiter - for general API endpoints
+            options.AddPolicy("api", context =>
+            {
+                var userId = context.User.Identity?.IsAuthenticated == true
+                    ? context.User.GetUserId()
+                    : context.Connection.RemoteIpAddress?.ToString();
+
+                return RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey: userId ?? "anonymous",
+                    factory: _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = rateLimitOptions.Api.PermitLimit,
+                        Window = TimeSpan.FromSeconds(rateLimitOptions.Api.Window),
+                        QueueLimit = rateLimitOptions.Api.QueueLimit
+                    });
+            });
+
+            options.OnRejected = async (context, cancellationToken) =>
+            {
+                TimeSpan? retryAfter = null;
+                if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfterValue))
+                {
+                    retryAfter = retryAfterValue;
+                    context.HttpContext.Response.Headers.RetryAfter = retryAfterValue.TotalSeconds.ToString();
+                }
+
+                context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+                context.HttpContext.Response.ContentType = "application/json";
+
+                var error = new
+                {
+                    type = "RateLimit.TooManyRequests",
+                    title = "Too Many Requests",
+                    status = StatusCodes.Status429TooManyRequests,
+                    detail = "Rate limit exceeded. Please try again later.",
+                    retryAfter = retryAfter?.TotalSeconds
+                };
+
+                await context.HttpContext.Response.WriteAsJsonAsync(error, cancellationToken);
+            };
         });
 
         return services;

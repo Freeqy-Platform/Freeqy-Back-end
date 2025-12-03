@@ -1,10 +1,12 @@
 using Freeqy_APIs.Contracts.Projects;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Freeqy_APIs.Controllers;
 
 [ApiController]
 [Route("api/[Controller]")]
 [Authorize]
+[EnableRateLimiting("api")]
 public class ProjectInvitationsController(
     IProjectInvitationService invitationService) : ControllerBase
 {

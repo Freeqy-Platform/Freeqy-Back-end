@@ -1,8 +1,11 @@
-﻿namespace Freeqy_APIs.Controllers;
+﻿using Microsoft.AspNetCore.RateLimiting;
+
+namespace Freeqy_APIs.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
 [Authorize]
+[EnableRateLimiting("api")]
 public class UsersController(IUserService userService) : ControllerBase
 {
 	private readonly IUserService _userService = userService;

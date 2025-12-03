@@ -1,11 +1,13 @@
 using Freeqy_APIs.Contracts.Category;
 using Freeqy_APIs.Contracts.Projects;
 using Freeqy_APIs.Contracts.Technology;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Freeqy_APIs.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[EnableRateLimiting("api")]
 public class ProjectsController(IProjectService projectService) : ControllerBase
 {
     private readonly IProjectService _projectService = projectService;
