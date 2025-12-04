@@ -12,6 +12,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<UserTags> UserTags { get; set; }
     public DbSet<UserSocialMedia> UserSocialMedia { get; set; }
     public DbSet<UserEducation> UserEducations { get; set; }
+    public DbSet<UserCertificate> UserCertificates { get; set; }
     public DbSet<Skill> Skills { get; set; }    
     public DbSet<UserSkill> UserSkills{ get; set; }    
     public DbSet<Track> Tracks{ get; set; }    

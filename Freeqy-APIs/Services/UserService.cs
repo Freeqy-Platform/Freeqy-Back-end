@@ -355,4 +355,51 @@ public class UserService(UserManager<ApplicationUser> userManager, IWebHostEnvir
 		var response = updatedUser.Adapt<UserProfileResponse>();
 		return Result.Success(response);
 	}
+
+	public async Task<Result<UserProfileResponse>> UpdateCertificatesAsync(string userId, UpdateCertificatesRequest request, CancellationToken cancellationToken = default)
+	{
+		var user = await _userManager.Users
+			.Include(u => u.Certificates)
+			.SingleOrDefaultAsync(u => u.Id == userId, cancellationToken);
+
+		if (user is null)
+			return Result.Failure<UserProfileResponse>(UserErrors.UserNotFound);
+
+		await _context.UserCertificates
+			.Where(uc => uc.UserId == userId)
+			.ExecuteDeleteAsync(cancellationToken);
+
+		foreach (var certificate in request.Certificates)
+		{
+			if (string.IsNullOrWhiteSpace(certificate.CertificateName))
+				continue;
+
+			_context.UserCertificates.Add(new UserCertificate
+			{
+				UserId = userId,
+				CertificateName = certificate.CertificateName.Trim(),
+				Issuer = certificate.Issuer?.Trim(),
+				IssueDate = certificate.IssueDate,
+				ExpirationDate = certificate.ExpirationDate,
+				CredentialId = certificate.CredentialId?.Trim(),
+				CredentialUrl = certificate.CredentialUrl?.Trim(),
+				Description = certificate.Description?.Trim(),
+				CreatedAt = DateTime.UtcNow
+			});
+		}
+
+		await _context.SaveChangesAsync(cancellationToken);
+
+		var updatedUser = await _userManager.Users
+			.Include(u => u.Certificates)
+			.Include(u => u.Educations)
+			.Include(u => u.SocialMediaLinks)
+			.Include(u => u.Skills)
+			.ThenInclude(us => us.Skill)
+			.Include(u => u.Track)
+			.SingleAsync(u => u.Id == userId, cancellationToken);
+
+		var response = updatedUser.Adapt<UserProfileResponse>();
+		return Result.Success(response);
+	}
 }

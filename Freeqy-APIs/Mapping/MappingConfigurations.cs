@@ -31,6 +31,16 @@ public class MappingConfigurations : IRegister
 		        e.EndDate,
 		        e.Grade,
 		        e.Description
+	        )))
+	        .Map(dest => dest.Certificates, src => src.Certificates.Select(c => new CertificateDto(
+		        c.Id,
+		        c.CertificateName,
+		        c.Issuer,
+		        c.IssueDate,
+		        c.ExpirationDate,
+		        c.CredentialId,
+		        c.CredentialUrl,
+		        c.Description
 	        )));
 
         config.NewConfig<(ProjectInvitation invitation, Project project, ApplicationUser senderUser), ProjectInvitationResponse>()

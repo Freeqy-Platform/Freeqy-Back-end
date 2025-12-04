@@ -20,4 +20,5 @@ public sealed class ApplicationUser : IdentityUser
 
 	public ICollection<UserSocialMedia> SocialMediaLinks { get; set; } = [];
 	public ICollection<UserEducation> Educations { get; set; } = [];
+	public ICollection<UserCertificate> Certificates { get; set; } = [];
 }

@@ -87,4 +87,12 @@ public class UsersController(IUserService userService) : ControllerBase
 
 		return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
 	}
+
+	[HttpPut("me/certificates")]
+	public async Task<IActionResult> UpdateCertificates([FromBody] UpdateCertificatesRequest request, CancellationToken cancellationToken)
+	{
+		var result = await _userService.UpdateCertificatesAsync(User.GetUserId()!, request, cancellationToken);
+
+		return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
+	}
 }
