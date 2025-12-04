@@ -309,4 +309,50 @@ public class UserService(UserManager<ApplicationUser> userManager, IWebHostEnvir
 		var response = updatedUser.Adapt<UserProfileResponse>();
 		return Result.Success(response);
 	}
+
+	public async Task<Result<UserProfileResponse>> UpdateEducationsAsync(string userId, UpdateEducationsRequest request, CancellationToken cancellationToken = default)
+	{
+		var user = await _userManager.Users
+			.Include(u => u.Educations)
+			.SingleOrDefaultAsync(u => u.Id == userId, cancellationToken);
+
+		if (user is null)
+			return Result.Failure<UserProfileResponse>(UserErrors.UserNotFound);
+
+		await _context.UserEducations
+			.Where(ue => ue.UserId == userId)
+			.ExecuteDeleteAsync(cancellationToken);
+
+		foreach (var education in request.Educations)
+		{
+			if (string.IsNullOrWhiteSpace(education.InstitutionName))
+				continue;
+
+			_context.UserEducations.Add(new UserEducation
+			{
+				UserId = userId,
+				InstitutionName = education.InstitutionName.Trim(),
+				Degree = education.Degree?.Trim(),
+				FieldOfStudy = education.FieldOfStudy?.Trim(),
+				StartDate = education.StartDate,
+				EndDate = education.EndDate,
+				Grade = education.Grade?.Trim(),
+				Description = education.Description?.Trim(),
+				CreatedAt = DateTime.UtcNow
+			});
+		}
+
+		await _context.SaveChangesAsync(cancellationToken);
+
+		var updatedUser = await _userManager.Users
+			.Include(u => u.Educations)
+			.Include(u => u.SocialMediaLinks)
+			.Include(u => u.Skills)
+			.ThenInclude(us => us.Skill)
+			.Include(u => u.Track)
+			.SingleAsync(u => u.Id == userId, cancellationToken);
+
+		var response = updatedUser.Adapt<UserProfileResponse>();
+		return Result.Success(response);
+	}
 }

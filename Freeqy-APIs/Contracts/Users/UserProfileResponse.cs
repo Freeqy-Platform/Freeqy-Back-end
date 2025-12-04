@@ -10,5 +10,6 @@ public record UserProfileResponse(
 	
 	string? Track,
 	IEnumerable<SkillResponse>? Skills,
-	IEnumerable<SocialMediaLinkDto>? SocialLinks
+	IEnumerable<SocialMediaLinkDto>? SocialLinks,
+	IEnumerable<EducationDto>? Educations
 );

@@ -79,4 +79,12 @@ public class UsersController(IUserService userService) : ControllerBase
 
 		return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
 	}
+
+	[HttpPut("me/education")]
+	public async Task<IActionResult> UpdateEducations([FromBody] UpdateEducationsRequest request, CancellationToken cancellationToken)
+	{
+		var result = await _userService.UpdateEducationsAsync(User.GetUserId()!, request, cancellationToken);
+
+		return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
+	}
 }

@@ -21,7 +21,17 @@ public class MappingConfigurations : IRegister
         config.NewConfig<ApplicationUser, UserProfileResponse>()
 	        .Map(dest => dest.Track, src => src.Track!.Name)
 	        .Map(dest => dest.Skills, src => src.Skills.Select(us => us.Skill))
-	        .Map(dest => dest.SocialLinks, src => src.SocialMediaLinks.Select(sm => new SocialMediaLinkDto(sm.Platform, sm.Link)));
+	        .Map(dest => dest.SocialLinks, src => src.SocialMediaLinks.Select(sm => new SocialMediaLinkDto(sm.Platform, sm.Link)))
+	        .Map(dest => dest.Educations, src => src.Educations.Select(e => new EducationDto(
+		        e.Id,
+		        e.InstitutionName,
+		        e.Degree,
+		        e.FieldOfStudy,
+		        e.StartDate,
+		        e.EndDate,
+		        e.Grade,
+		        e.Description
+	        )));
 
         config.NewConfig<(ProjectInvitation invitation, Project project, ApplicationUser senderUser), ProjectInvitationResponse>()
             .Map(dest => dest.InviteId, src => src.invitation.Id)
@@ -31,7 +41,5 @@ public class MappingConfigurations : IRegister
             .Map(dest => dest.ExpiresAt, src => src.invitation.ExpiresAt)
             .Map(dest => dest.SentBy,
                  src => src.senderUser.FirstName + " " + src.senderUser.LastName);
-
-      
-    }
+	}
 }
