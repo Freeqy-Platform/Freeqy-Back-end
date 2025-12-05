@@ -449,4 +449,25 @@ public class UserService(UserManager<ApplicationUser> userManager, IWebHostEnvir
 		var response = updatedUser.Adapt<UserProfileResponse>();
 		return Result.Success(response);
 	}
+
+	public async Task<Result<UserProfileResponse>> GetUserByUsernameAsync(string username, CancellationToken cancellationToken = default)
+	{
+		var user = await _userManager.FindByNameAsync(username);
+
+		if (user is null)
+			return Result.Failure<UserProfileResponse>(UserErrors.UserNotFound);
+
+		var userProfile = await _userManager.Users
+			.Where(u => u.Id == user.Id)
+			.Include(u => u.Certificates)
+			.Include(u => u.Educations)
+			.Include(u => u.SocialMediaLinks)
+			.Include(u => u.Skills)
+			.ThenInclude(us => us.Skill)
+			.Include(u => u.Track)
+			.ProjectToType<UserProfileResponse>()
+			.SingleAsync(cancellationToken);
+
+		return Result.Success(userProfile);
+	}
 }

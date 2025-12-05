@@ -103,4 +103,12 @@ public class UsersController(IUserService userService) : ControllerBase
 
 		return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
 	}
+
+	[HttpGet("search/{username}")]
+	public async Task<IActionResult> GetUserByUsername(string username, CancellationToken cancellationToken)
+	{
+		var result = await _userService.GetUserByUsernameAsync(username, cancellationToken);
+
+		return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
+	}
 }
