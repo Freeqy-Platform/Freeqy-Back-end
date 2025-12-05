@@ -34,4 +34,10 @@ public class UserErrors
 
     public static readonly Error NoPhotoProvided =
         new("User.NoPhotoProvided", "No photo file was provided.", StatusCodes.Status400BadRequest);
+
+    public static readonly Error DuplicateUsername =
+        new("User.DuplicateUsername", "This username is already taken", StatusCodes.Status409Conflict);
+
+    public static readonly Error SameUsername =
+        new("User.SameUsername", "New username is the same as the current username", StatusCodes.Status400BadRequest);
 }

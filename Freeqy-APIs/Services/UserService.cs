@@ -402,4 +402,51 @@ public class UserService(UserManager<ApplicationUser> userManager, IWebHostEnvir
 		var response = updatedUser.Adapt<UserProfileResponse>();
 		return Result.Success(response);
 	}
+
+	public async Task<Result<UserProfileResponse>> UpdateUsernameAsync(string userId, UpdateUsernameRequest request, CancellationToken cancellationToken = default)
+	{
+		var user = await _userManager.FindByIdAsync(userId);
+
+		if (user is null)
+			return Result.Failure<UserProfileResponse>(UserErrors.UserNotFound);
+
+		var newUsername = request.NewUsername.Trim();
+
+		if (user.UserName == newUsername)
+			return Result.Failure<UserProfileResponse>(UserErrors.SameUsername);
+
+		var existingUser = await _userManager.FindByNameAsync(newUsername);
+		if (existingUser is not null)
+			return Result.Failure<UserProfileResponse>(UserErrors.DuplicateUsername);
+
+		user.UserName = newUsername;
+		user.NormalizedUserName = newUsername.ToUpperInvariant();
+
+		var result = await _userManager.UpdateAsync(user);
+
+		if (!result.Succeeded)
+		{
+			var error = result.Errors.FirstOrDefault();
+			if (error is null)
+			{
+				return Result.Failure<UserProfileResponse>(
+					new Error("User.UpdateFailed", "Failed to update username", StatusCodes.Status500InternalServerError));
+			}
+
+			return Result.Failure<UserProfileResponse>(
+				new Error(error.Code, error.Description, StatusCodes.Status400BadRequest));
+		}
+
+		var updatedUser = await _userManager.Users
+			.Include(u => u.Certificates)
+			.Include(u => u.Educations)
+			.Include(u => u.SocialMediaLinks)
+			.Include(u => u.Skills)
+			.ThenInclude(us => us.Skill)
+			.Include(u => u.Track)
+			.SingleAsync(u => u.Id == userId, cancellationToken);
+
+		var response = updatedUser.Adapt<UserProfileResponse>();
+		return Result.Success(response);
+	}
 }
