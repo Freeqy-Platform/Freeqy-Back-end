@@ -20,4 +20,5 @@ public interface IUserService
 	Task<Result<UserProfileResponse>> UpdateAvailabilityAsync(string userId, UpdateAvailabilityRequest request, CancellationToken cancellation = default);
 	Task<Result<UserProfileResponse>> UpdateEmailAsync(string userId, UpdateEmailRequest request, CancellationToken cancellation = default);
 	Task<Result> UpdatePasswordAsync(string userId, UpdatePasswordRequest request, CancellationToken cancellationToken = default);
+	Task<Result> ConfirmEmailChangeAsync(string userId, string token, CancellationToken cancellationToken = default);
 }

@@ -159,4 +159,18 @@ public class UsersController(IUserService userService) : ControllerBase
 
 		return result.IsSuccess ? NoContent() : result.ToProblem();
 	}
+
+	[HttpPost("confirm-email")]
+	[AllowAnonymous]
+	public async Task<IActionResult> ConfirmEmailChange([FromQuery] string userId, [FromQuery] string token, CancellationToken cancellationToken)
+	{
+		var result = await _userService.ConfirmEmailChangeAsync(userId, token, cancellationToken);
+
+		if (result.IsSuccess)
+		{
+			return Ok(new { message = "Email confirmed successfully! You can now login with your new email." });
+		}
+
+		return result.ToProblem();
+	}
 }

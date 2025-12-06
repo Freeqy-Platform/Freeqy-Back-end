@@ -1,13 +1,21 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Identity.UI.Services;
+using Microsoft.EntityFrameworkCore;
 using System.Linq;
 
 namespace Freeqy_APIs.Services;
 
-public class UserService(UserManager<ApplicationUser> userManager, IWebHostEnvironment environment, ApplicationDbContext context) : IUserService
+public class UserService(
+	UserManager<ApplicationUser> userManager, 
+	IWebHostEnvironment environment, 
+	ApplicationDbContext context,
+	IEmailSender emailSender,
+	ILogger<UserService> logger) : IUserService
 {
 	private readonly UserManager<ApplicationUser> _userManager = userManager;
 	private readonly IWebHostEnvironment _environment = environment;
 	private readonly ApplicationDbContext _context = context;
+	private readonly IEmailSender _emailSender = emailSender;
+	private readonly ILogger<UserService> _logger = logger;
 	private const long MaxFileSize = 5 * 1024 * 1024; // 5MB
 	private static readonly string[] AllowedExtensions = [".jpg", ".jpeg", ".png", ".webp"];
 
@@ -667,6 +675,7 @@ public class UserService(UserManager<ApplicationUser> userManager, IWebHostEnvir
 		if (existingUser is not null)
 			return Result.Failure<UserProfileResponse>(UserErrors.DuplicateEmail);
 
+		var oldEmail = user.Email;
 		user.Email = newEmail;
 		user.NormalizedEmail = newEmail.ToUpperInvariant();
 		user.EmailConfirmed = false;
@@ -684,6 +693,25 @@ public class UserService(UserManager<ApplicationUser> userManager, IWebHostEnvir
 
 			return Result.Failure<UserProfileResponse>(
 				new Error(error.Code, error.Description, StatusCodes.Status400BadRequest));
+		}
+
+		try
+		{
+			var confirmToken = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+			
+			if (_emailSender is EmailService emailService)
+			{
+				await emailService.SendEmailConfirmationAsync(newEmail, confirmToken, userId);
+				
+				if (!string.IsNullOrEmpty(oldEmail))
+				{
+					await emailService.SendEmailChangeNotificationAsync(oldEmail, newEmail);
+				}
+			}
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "Failed to send email confirmation for user {UserId}", userId);
 		}
 
 		var updatedUser = await _userManager.Users
@@ -730,6 +758,25 @@ public class UserService(UserManager<ApplicationUser> userManager, IWebHostEnvir
 				new Error(error.Code, error.Description, StatusCodes.Status400BadRequest));
 		}
 
+		return Result.Success();
+	}
+
+	public async Task<Result> ConfirmEmailChangeAsync(string userId, string token, CancellationToken cancellationToken = default)
+	{
+		var user = await _userManager.FindByIdAsync(userId);
+
+		if (user is null)
+			return Result.Failure(UserErrors.UserNotFound);
+
+		var result = await _userManager.ConfirmEmailAsync(user, token);
+
+		if (!result.Succeeded)
+		{
+			_logger.LogWarning("Failed to confirm email for user {UserId}", userId);
+			return Result.Failure(UserErrors.InvalidToken);
+		}
+
+		_logger.LogInformation("Email confirmed successfully for user {UserId}", userId);
 		return Result.Success();
 	}
 }
