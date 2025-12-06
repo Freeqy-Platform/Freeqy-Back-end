@@ -186,6 +186,50 @@ public class UserService(UserManager<ApplicationUser> userManager, IWebHostEnvir
 		return Result.Success(response);
 	}
 
+	public async Task<Result> DeleteUserPhotoAsync(string userId)
+	{
+		var user = await _userManager.FindByIdAsync(userId);
+
+		if (user is null)
+			return Result.Failure(UserErrors.UserNotFound);
+
+		if (string.IsNullOrEmpty(user.PhotoUrl))
+			return Result.Failure(UserErrors.PhotoNotFound);
+
+		var photoPath = Path.Combine(_environment.WebRootPath, user.PhotoUrl.TrimStart('/'));
+		
+		if (File.Exists(photoPath))
+		{
+			try
+			{
+				File.Delete(photoPath);
+			}
+			catch (Exception)
+			{
+				// Continue even if file deletion fails
+			}
+		}
+
+		user.PhotoUrl = null;
+
+		var result = await _userManager.UpdateAsync(user);
+
+		if (!result.Succeeded)
+		{
+			var error = result.Errors.FirstOrDefault();
+			if (error is null)
+			{
+				return Result.Failure(
+					new Error("User.UpdateFailed", "Failed to delete user photo", StatusCodes.Status500InternalServerError));
+			}
+
+			return Result.Failure(
+				new Error(error.Code, error.Description, StatusCodes.Status400BadRequest));
+		}
+
+		return Result.Success();
+	}
+
 	public async Task<Result<UserProfileResponse>> UpdateSkillsAsync(string userId, UpdateUserSkillsRequest skillsRequest, CancellationToken cancellationToken = default)
 	{
 		var user = await _userManager.Users

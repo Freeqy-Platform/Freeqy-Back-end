@@ -56,6 +56,14 @@ public class UsersController(IUserService userService) : ControllerBase
 		return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
 	}
 
+	[HttpDelete("me/photo")]
+	public async Task<IActionResult> DeleteMyPhoto()
+	{
+		var result = await _userService.DeleteUserPhotoAsync(User.GetUserId()!);
+
+		return result.IsSuccess ? NoContent() : result.ToProblem();
+	}
+
 	[HttpGet("")]
 	public async Task<IActionResult> GetAll([FromQuery] UserProfileRequestFilter userProfileRequestFilter, CancellationToken cancellationToken)
 	{
