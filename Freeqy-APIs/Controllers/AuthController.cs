@@ -50,7 +50,7 @@ public class AuthController(ILogger<AuthController> logger,
     [HttpPost("login")]
     public async Task<IActionResult> LoginAsync(LoginRequest request, CancellationToken cancellationToken)
     {
-        var authResult = await _authService.GetTokenAsync(request.Email, request.Password, cancellationToken);
+        var authResult = await _authService.GetTokenAsync(request.EmailOrUsername, request.Password, cancellationToken);
 
         return authResult.IsSuccess ? Ok(authResult.Value) : authResult.ToProblem();
     }

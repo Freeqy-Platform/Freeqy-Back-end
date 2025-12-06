@@ -1,5 +1,4 @@
-﻿
-using Freeqy_APIs.Helper;
+﻿using Freeqy_APIs.Helper;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.WebUtilities;
 using static Freeqy_APIs.Contracts.Authentication.RegisterRequest;
@@ -17,9 +16,24 @@ public class AuthService(UserManager<ApplicationUser> userManager, IJwtProvider 
     private readonly IHttpContextAccessor _httpContextAccessor = accessor;
     private readonly IEmailSender _emailService = emailService;
 
-    public async Task<Result<AuthResponse>> GetTokenAsync(string email, string password, CancellationToken cancellationToken = default)
-    {  
-        if (await _userManager.FindByEmailAsync(email) is not { } user)
+    public async Task<Result<AuthResponse>> GetTokenAsync(string emailOrUsername, string password, CancellationToken cancellationToken = default)
+    {
+        ApplicationUser? user = null;
+
+        // Try to find user by email first
+        if (emailOrUsername.Contains('@'))
+        {
+            user = await _userManager.FindByEmailAsync(emailOrUsername);
+        }
+        
+        // If not found by email or doesn't contain @, try username
+        if (user is null)
+        {
+            user = await _userManager.FindByNameAsync(emailOrUsername);
+        }
+
+        // If user still not found, return invalid credentials
+        if (user is null)
             return Result.Failure<AuthResponse>(UserErrors.InvalidCredentials);
 
         var result = await _signInManager.PasswordSignInAsync(user, password, false, false);
@@ -28,7 +42,7 @@ public class AuthService(UserManager<ApplicationUser> userManager, IJwtProvider 
         {
             var (token, expiresIn) = _jwtProvider.GenerateToken(user);
 
-           var response = new AuthResponse(user.Id, user.FirstName, user.LastName, user.Email, token, expiresIn);
+            var response = new AuthResponse(user.Id, user.FirstName, user.LastName, user.Email, token, expiresIn);
 
             return Result.Success(response);
         }   

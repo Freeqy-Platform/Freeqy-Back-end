@@ -1,6 +1,6 @@
 ﻿namespace Freeqy_APIs.Contracts.Authentication;
 
 public record LoginRequest(
-    string Email,
+    string EmailOrUsername,
     string Password
 );
