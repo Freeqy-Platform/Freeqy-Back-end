@@ -6,8 +6,8 @@ public class MappingConfigurations : IRegister
 {
     public void Register(TypeAdapterConfig config)
     {
-        config.NewConfig<RegisterRequest, ApplicationUser>()
-            .Map(dest => dest.UserName, src => src.Email);
+        config.NewConfig<RegisterRequest, ApplicationUser>();
+        
         config.NewConfig<ApplicationUser, SimpleUserDto>()
             .Map(dest => dest.Name, src => src.FirstName + " " + src.LastName);
 

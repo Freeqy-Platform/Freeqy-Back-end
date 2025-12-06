@@ -143,4 +143,12 @@ public class UsersController(IUserService userService) : ControllerBase
 
 		return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
 	}
+
+	[HttpPut("me/email")]
+	public async Task<IActionResult> UpdateEmail([FromBody] UpdateEmailRequest request, CancellationToken cancellationToken)
+	{
+		var result = await _userService.UpdateEmailAsync(User.GetUserId()!, request, cancellationToken);
+
+		return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
+	}
 }

@@ -646,4 +646,57 @@ public class UserService(UserManager<ApplicationUser> userManager, IWebHostEnvir
 
 		return Result.Success(updatedUser);
 	}
+
+	public async Task<Result<UserProfileResponse>> UpdateEmailAsync(string userId, UpdateEmailRequest request, CancellationToken cancellationToken = default)
+	{
+		var user = await _userManager.FindByIdAsync(userId);
+
+		if (user is null)
+			return Result.Failure<UserProfileResponse>(UserErrors.UserNotFound);
+
+		var newEmail = request.NewEmail.Trim().ToLowerInvariant();
+
+		if (user.Email?.ToLowerInvariant() == newEmail)
+			return Result.Failure<UserProfileResponse>(UserErrors.SameEmail);
+
+		var passwordValid = await _userManager.CheckPasswordAsync(user, request.CurrentPassword);
+		if (!passwordValid)
+			return Result.Failure<UserProfileResponse>(UserErrors.InvalidPassword);
+
+		var existingUser = await _userManager.FindByEmailAsync(newEmail);
+		if (existingUser is not null)
+			return Result.Failure<UserProfileResponse>(UserErrors.DuplicateEmail);
+
+		user.Email = newEmail;
+		user.NormalizedEmail = newEmail.ToUpperInvariant();
+		user.EmailConfirmed = false;
+
+		var result = await _userManager.UpdateAsync(user);
+
+		if (!result.Succeeded)
+		{
+			var error = result.Errors.FirstOrDefault();
+			if (error is null)
+			{
+				return Result.Failure<UserProfileResponse>(
+					new Error("User.UpdateFailed", "Failed to update email", StatusCodes.Status500InternalServerError));
+			}
+
+			return Result.Failure<UserProfileResponse>(
+				new Error(error.Code, error.Description, StatusCodes.Status400BadRequest));
+		}
+
+		var updatedUser = await _userManager.Users
+			.Where(u => u.Id == userId)
+			.Include(u => u.Certificates)
+			.Include(u => u.Educations)
+			.Include(u => u.SocialMediaLinks)
+			.Include(u => u.Skills)
+			.ThenInclude(us => us.Skill)
+			.Include(u => u.Track)
+			.ProjectToType<UserProfileResponse>()
+			.SingleAsync(cancellationToken);
+
+		return Result.Success(updatedUser);
+	}
 }

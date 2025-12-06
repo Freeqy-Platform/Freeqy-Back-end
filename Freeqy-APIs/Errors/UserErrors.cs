@@ -46,4 +46,10 @@ public class UserErrors
 
     public static readonly Error SamePhoneNumber =
         new("User.SamePhoneNumber", "New phone number is the same as the current phone number", StatusCodes.Status400BadRequest);
+
+    public static readonly Error SameEmail =
+        new("User.SameEmail", "New email is the same as the current email", StatusCodes.Status400BadRequest);
+
+    public static readonly Error InvalidPassword =
+        new("User.InvalidPassword", "Current password is incorrect", StatusCodes.Status401Unauthorized);
 }
