@@ -119,4 +119,12 @@ public class UsersController(IUserService userService) : ControllerBase
 
 		return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
 	}
+
+	[HttpPut("me/summary")]
+	public async Task<IActionResult> UpdateSummary([FromBody] UpdateSummaryRequest request, CancellationToken cancellationToken)
+	{
+		var result = await _userService.UpdateSummaryAsync(User.GetUserId()!, request, cancellationToken);
+
+		return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
+	}
 }

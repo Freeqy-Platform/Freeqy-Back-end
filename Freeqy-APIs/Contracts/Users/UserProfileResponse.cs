@@ -8,6 +8,7 @@ public record UserProfileResponse(
 	string LastName,
 	string? PhotoUrl,
 	string? PhoneNumber,
+	string? Summary,
 	
 	string? Track,
 	IEnumerable<SkillResponse>? Skills,
