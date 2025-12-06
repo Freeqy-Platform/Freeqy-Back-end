@@ -25,7 +25,7 @@ public interface IProjectService
 
     Task<Result<List<CategoryResponse>>> GetCategoriesAsync(CancellationToken cancellationToken = default);
 
-    Task<Result<ProjectListResponse>> AddProjectAsync(string userId, ProjectRequest request,
+    Task<Result<ProjectListItemResponse>> AddProjectAsync(string userId, ProjectRequest request,
         CancellationToken cancellationToken = default);
 
     Task<Result> UpdateProjectAsync(string projectId, string userId, ProjectRequest request,
@@ -42,4 +42,5 @@ public interface IProjectService
     public Task<Result> RemoveMemberFromProject(string projectId, string userId, string memberId,
         CancellationToken cancellationToken = default);
         
+    public Task<Result<ProjectListItemResponse>> GetProjectByIdAsync(string id,CancellationToken cancellationToken = default);
 }

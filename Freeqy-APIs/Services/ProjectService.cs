@@ -21,6 +21,26 @@ public class ProjectService(ApplicationDbContext dbContext, UserManager<Applicat
         return Result.Success(new ProjectListResponse(projectList));
     }
 
+    // Should Review This Service
+    public async Task<Result<ProjectListItemResponse>> GetProjectByIdAsync(string id, 
+        CancellationToken cancellationToken = default)
+    {
+        var project = await _dbContext.Projects
+            .Include(p => p.Owner)
+            .Include(p => p.Category)
+            .Include(p => p.Technologies)
+            .Include(p => p.ProjectMembers)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
+    
+        if (project == null)
+            return Result.Failure<ProjectListItemResponse>(ProjectErrors.NotFound);
+    
+        var response = project.Adapt<ProjectListItemResponse>();
+    
+        return Result.Success(response);
+    }
+
     public async Task<Result<CategoryResponse>> AddCategoryAsync(CategoryRequest request, CancellationToken cancellationToken = default)
     {
         var isExist = await _dbContext.Categories.AnyAsync(c => c.Name == request.Name, cancellationToken);
@@ -54,12 +74,12 @@ public class ProjectService(ApplicationDbContext dbContext, UserManager<Applicat
         if (isExist)
             return Result.Failure<TechnologyResponse>(TechnologyErrors.DuplicateName);
         
-        Category category = request.Adapt<Category>();
+        var technology = request.Adapt<Technology>();
         
-        await _dbContext.Categories.AddAsync(category, cancellationToken);
+        await _dbContext.Technologies.AddAsync(technology, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
         
-        return Result.Success(category.Adapt<TechnologyResponse>());
+        return Result.Success(technology.Adapt<TechnologyResponse>());
     }
 
     public async Task<Result<TechnologyResponse>> GetTechnologyByIdAsync(string id,
@@ -95,23 +115,23 @@ public class ProjectService(ApplicationDbContext dbContext, UserManager<Applicat
         return Result.Success(categories);
     }
 
-    public async Task<Result<ProjectListResponse>> AddProjectAsync(string userId, ProjectRequest request,
+    public async Task<Result<ProjectListItemResponse>> AddProjectAsync(string userId, ProjectRequest request,
         CancellationToken cancellationToken = default)
     {
         var isExistingProjectName = await _dbContext.Projects.AnyAsync(p => p.Name == request.Name, cancellationToken);
 
-        if (isExistingProjectName) return Result.Failure<ProjectListResponse>(ProjectErrors.DuplicateName);
+        if (isExistingProjectName) return Result.Failure<ProjectListItemResponse>(ProjectErrors.DuplicateName);
         
         var category = await _dbContext.Categories.FindAsync(request.CategoryId, cancellationToken);
         if (category is null) 
-            return Result.Failure<ProjectListResponse>(CategoryErrors.NotFound);
+            return Result.Failure<ProjectListItemResponse>(CategoryErrors.NotFound);
 
         var technologies = await _dbContext.Technologies
             .Where(x => request.TechnologyIds.Contains(x.Id))
             .ToListAsync(cancellationToken);
 
         if (technologies.Count != request.TechnologyIds.Count)
-            return Result.Failure<ProjectListResponse>(TechnologyErrors.NotFound);
+            return Result.Failure<ProjectListItemResponse>(TechnologyErrors.NotFound);
         
         var user = _userManager.FindByIdAsync(userId).Result;
         
@@ -124,7 +144,7 @@ public class ProjectService(ApplicationDbContext dbContext, UserManager<Applicat
         await _dbContext.Projects.AddAsync(project, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
         
-        return Result.Success(project.Adapt<ProjectListResponse>());
+        return Result.Success(project.Adapt<ProjectListItemResponse>());
     }
 
     public async Task<Result> UpdateProjectAsync(

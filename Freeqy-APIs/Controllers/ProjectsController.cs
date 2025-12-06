@@ -19,18 +19,25 @@ public class ProjectsController(IProjectService projectService) : ControllerBase
         return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
     }
 
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetProjectById(string id, CancellationToken cancellationToken)
+    {
+        var result = await _projectService.GetProjectByIdAsync(id, cancellationToken);
+        return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
+    }
+    
     [HttpPost]
     [Authorize]
     public async Task<IActionResult> AddProject([FromBody] ProjectRequest projectRequest, CancellationToken cancellationToken)
     {
         var result = await _projectService.AddProjectAsync( User.GetUserId()!,projectRequest, cancellationToken);
-        return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
+        return result.IsSuccess ? CreatedAtAction(nameof(GetProjectById), new {id = result.Value.Id}, result.Value) : result.ToProblem();
     }
     [HttpPut("{projectId}")]
     public async Task<IActionResult> UpdateProject(string projectId, [FromBody] ProjectRequest projectRequest, CancellationToken cancellationToken)
     {
         var result = await _projectService.UpdateProjectAsync(projectId,User.GetUserId()!, projectRequest, cancellationToken);
-        return result.IsSuccess ? Ok() : result.ToProblem();
+        return result.IsSuccess ? NoContent() : result.ToProblem();
     }
 
 
@@ -64,7 +71,7 @@ public class ProjectsController(IProjectService projectService) : ControllerBase
     {
         var result = await _projectService.AddTechnologyAsync(technologyRequest, cancellationToken);
         return result.IsSuccess ?
-            CreatedAtAction(nameof(GetTechnologyByIdAsync), new {id = result.Value.Id}, result.Value) 
+            CreatedAtAction(nameof(GetTechnologyById), new {id = result.Value.Id}, result.Value) 
             : result.ToProblem();
     }
 
@@ -75,8 +82,8 @@ public class ProjectsController(IProjectService projectService) : ControllerBase
         return Ok(result.Value);
     }
 
-    [HttpPost("technologies/{id}")]
-    public async Task<IActionResult> GetTechnologyByIdAsync(string id,
+    [HttpGet("technologies/{id}")]
+    public async Task<IActionResult> GetTechnologyById(string id,
         CancellationToken cancellationToken = default)
     {
         var result = await _projectService.GetTechnologyByIdAsync(id, cancellationToken);
@@ -100,7 +107,7 @@ public class ProjectsController(IProjectService projectService) : ControllerBase
         return Ok(result.Value);
     }
 
-    [HttpPost("categories/{id}")]
+    [HttpGet("categories/{id}")]
     public async Task<IActionResult> GetCategoryById(string id,
         CancellationToken cancellationToken = default)
     {
