@@ -13,6 +13,7 @@ public sealed class ApplicationUser : IdentityUser
 	public int? TrackId { get; set; }
 	public string? PhotoUrl { get; set; }
 	public string? Summary { get; set; }
+	public UserAvailability Availability { get; set; } = UserAvailability.Available;
 
 	public Track? Track { get; set; }
 	public IEnumerable<RefreshToken> RefreshTokens { get; set; } = [];

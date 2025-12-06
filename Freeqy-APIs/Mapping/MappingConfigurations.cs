@@ -22,6 +22,7 @@ public class MappingConfigurations : IRegister
 	        .Map(dest => dest.Track, src => src.Track!.Name)
 	        .Map(dest => dest.Skills, src => src.Skills.Select(us => us.Skill))
 	        .Map(dest => dest.SocialLinks, src => src.SocialMediaLinks.Select(sm => new SocialMediaLinkDto(sm.Platform, sm.Link)))
+	        .Map(dest => dest.Availability, src => src.Availability.ToString())
 	        .Map(dest => dest.Educations, src => src.Educations.Select(e => new EducationDto(
 		        e.Id,
 		        e.InstitutionName,

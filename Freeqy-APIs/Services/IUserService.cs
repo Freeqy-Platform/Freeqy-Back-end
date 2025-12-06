@@ -16,4 +16,5 @@ public interface IUserService
 	Task<Result<UserProfileResponse>> GetUserByUsernameAsync(string username, CancellationToken cancellation = default);
 	Task<Result<UserProfileResponse>> UpdatePhoneNumberAsync(string userId, UpdatePhoneNumberRequest request, CancellationToken cancellation = default);
 	Task<Result<UserProfileResponse>> UpdateSummaryAsync(string userId, UpdateSummaryRequest request, CancellationToken cancellation = default);
+	Task<Result<UserProfileResponse>> UpdateAvailabilityAsync(string userId, UpdateAvailabilityRequest request, CancellationToken cancellation = default);
 }

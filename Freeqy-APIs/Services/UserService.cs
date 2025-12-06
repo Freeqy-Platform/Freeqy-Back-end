@@ -558,4 +558,48 @@ public class UserService(UserManager<ApplicationUser> userManager, IWebHostEnvir
 
 		return Result.Success(updatedUser);
 	}
+
+	public async Task<Result<UserProfileResponse>> UpdateAvailabilityAsync(string userId, UpdateAvailabilityRequest request, CancellationToken cancellationToken = default)
+	{
+		var user = await _userManager.FindByIdAsync(userId);
+
+		if (user is null)
+			return Result.Failure<UserProfileResponse>(UserErrors.UserNotFound);
+
+		if (!Enum.TryParse<UserAvailability>(request.Availability, true, out var availability))
+		{
+			return Result.Failure<UserProfileResponse>(
+				new Error("User.InvalidAvailability", "Invalid availability status", StatusCodes.Status400BadRequest));
+		}
+
+		user.Availability = availability;
+
+		var result = await _userManager.UpdateAsync(user);
+
+		if (!result.Succeeded)
+		{
+			var error = result.Errors.FirstOrDefault();
+			if (error is null)
+			{
+				return Result.Failure<UserProfileResponse>(
+					new Error("User.UpdateFailed", "Failed to update availability", StatusCodes.Status500InternalServerError));
+			}
+
+			return Result.Failure<UserProfileResponse>(
+				new Error(error.Code, error.Description, StatusCodes.Status400BadRequest));
+		}
+
+		var updatedUser = await _userManager.Users
+			.Where(u => u.Id == userId)
+			.Include(u => u.Certificates)
+			.Include(u => u.Educations)
+			.Include(u => u.SocialMediaLinks)
+			.Include(u => u.Skills)
+			.ThenInclude(us => us.Skill)
+			.Include(u => u.Track)
+			.ProjectToType<UserProfileResponse>()
+			.SingleAsync(cancellationToken);
+
+		return Result.Success(updatedUser);
+	}
 }

@@ -127,4 +127,12 @@ public class UsersController(IUserService userService) : ControllerBase
 
 		return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
 	}
+
+	[HttpPut("me/availability")]
+	public async Task<IActionResult> UpdateAvailability([FromBody] UpdateAvailabilityRequest request, CancellationToken cancellationToken)
+	{
+		var result = await _userService.UpdateAvailabilityAsync(User.GetUserId()!, request, cancellationToken);
+
+		return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
+	}
 }
