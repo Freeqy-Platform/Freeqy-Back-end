@@ -699,4 +699,37 @@ public class UserService(UserManager<ApplicationUser> userManager, IWebHostEnvir
 
 		return Result.Success(updatedUser);
 	}
+
+	public async Task<Result> UpdatePasswordAsync(string userId, UpdatePasswordRequest request, CancellationToken cancellationToken = default)
+	{
+		var user = await _userManager.FindByIdAsync(userId);
+
+		if (user is null)
+			return Result.Failure(UserErrors.UserNotFound);
+
+		var passwordValid = await _userManager.CheckPasswordAsync(user, request.CurrentPassword);
+		if (!passwordValid)
+			return Result.Failure(UserErrors.InvalidPassword);
+
+		var isSamePassword = await _userManager.CheckPasswordAsync(user, request.NewPassword);
+		if (isSamePassword)
+			return Result.Failure(UserErrors.SamePassword);
+
+		var result = await _userManager.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword);
+
+		if (!result.Succeeded)
+		{
+			var error = result.Errors.FirstOrDefault();
+			if (error is null)
+			{
+				return Result.Failure(
+					new Error("User.UpdateFailed", "Failed to update password", StatusCodes.Status500InternalServerError));
+			}
+
+			return Result.Failure(
+				new Error(error.Code, error.Description, StatusCodes.Status400BadRequest));
+		}
+
+		return Result.Success();
+	}
 }

@@ -52,4 +52,7 @@ public class UserErrors
 
     public static readonly Error InvalidPassword =
         new("User.InvalidPassword", "Current password is incorrect", StatusCodes.Status401Unauthorized);
+
+    public static readonly Error SamePassword =
+        new("User.SamePassword", "New password must be different from the current password", StatusCodes.Status400BadRequest);
 }

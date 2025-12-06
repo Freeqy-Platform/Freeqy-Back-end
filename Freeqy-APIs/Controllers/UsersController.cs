@@ -151,4 +151,12 @@ public class UsersController(IUserService userService) : ControllerBase
 
 		return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
 	}
+
+	[HttpPut("me/password")]
+	public async Task<IActionResult> UpdatePassword([FromBody] UpdatePasswordRequest request, CancellationToken cancellationToken)
+	{
+		var result = await _userService.UpdatePasswordAsync(User.GetUserId()!, request, cancellationToken);
+
+		return result.IsSuccess ? NoContent() : result.ToProblem();
+	}
 }
