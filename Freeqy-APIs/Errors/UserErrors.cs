@@ -55,4 +55,7 @@ public class UserErrors
 
     public static readonly Error SamePassword =
         new("User.SamePassword", "New password must be different from the current password", StatusCodes.Status400BadRequest);
+    
+    public static readonly Error NoAuthenticate =
+        new("User.NoAuthenticate", "Not authenticated request", StatusCodes.Status403Forbidden);
 }

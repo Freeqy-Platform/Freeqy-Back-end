@@ -49,6 +49,14 @@ public class ProjectsController(IProjectService projectService) : ControllerBase
         return result.IsSuccess ? NoContent() : result.ToProblem();
     }
 
+    [HttpPatch("{projectId}/status")]
+    [Authorize]
+    public async Task<IActionResult> ChangeProjectStatus(string projectId, ChangeProjectStatusRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _projectService.ChangeProjectStatusAsync(User.GetUserId(),  projectId, request, cancellationToken);
+        return result.IsSuccess ? NoContent() : result.ToProblem();
+    }
     
     [HttpPost("{projectId}/restore")]
     [Authorize]
