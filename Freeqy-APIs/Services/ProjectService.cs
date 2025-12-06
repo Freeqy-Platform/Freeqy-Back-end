@@ -41,6 +41,28 @@ public class ProjectService(ApplicationDbContext dbContext, UserManager<Applicat
         return Result.Success(response);
     }
 
+    public async Task<Result> ChangeProjectStatusAsync(string userId, string id, ChangeProjectStatusRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var project = await _dbContext.Projects.FindAsync(id, cancellationToken);
+        
+        if (project == null) 
+            return Result.Failure(ProjectErrors.NotFound);
+
+        if (project.OwnerId != userId)
+        {
+            return Result.Failure(UserErrors.NoAuthenticate);
+        }
+
+        if (project.Status != request.ProjectStatus)
+        {
+            project.Status = request.ProjectStatus;
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+            
+        return  Result.Success();
+    }
+
     public async Task<Result<CategoryResponse>> AddCategoryAsync(CategoryRequest request, CancellationToken cancellationToken = default)
     {
         var isExist = await _dbContext.Categories.AnyAsync(c => c.Name == request.Name, cancellationToken);

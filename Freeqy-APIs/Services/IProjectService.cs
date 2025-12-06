@@ -43,4 +43,7 @@ public interface IProjectService
         CancellationToken cancellationToken = default);
         
     public Task<Result<ProjectListItemResponse>> GetProjectByIdAsync(string id,CancellationToken cancellationToken = default);
+
+    Task<Result> ChangeProjectStatusAsync(string userId, string id, ChangeProjectStatusRequest request,
+        CancellationToken cancellationToken = default);
 }
