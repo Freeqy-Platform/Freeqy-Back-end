@@ -60,6 +60,15 @@ public class EmailService(ILogger<EmailService> logger, IOptions<MailConfig> mai
         _logger.LogInformation("Email change notification sent to {OldEmail}", oldEmail);
     }
 
+    public async Task SendPasswordChangedNotificationAsync(string email, string changeTime, string ipAddress, string userAgent)
+    {
+        var subject = "? Password Successfully Changed";
+        var htmlMessage = EmailTemplateBuilder.BuildPasswordChangedNotificationTemplate(changeTime, ipAddress, userAgent);
+
+        await SendEmailAsync(email, subject, htmlMessage);
+        _logger.LogInformation("Password changed notification sent to {Email}", email);
+    }
+
     public async Task SendWelcomeEmailAsync(string email, string userName, string token, string userId)
     {
         var encodedToken = Uri.EscapeDataString(token);
