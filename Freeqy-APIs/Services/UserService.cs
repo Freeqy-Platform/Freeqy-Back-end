@@ -9,13 +9,15 @@ public class UserService(
 	IWebHostEnvironment environment, 
 	ApplicationDbContext context,
 	IEmailSender emailSender,
-	ILogger<UserService> logger) : IUserService
+	ILogger<UserService> logger,
+	IHttpContextAccessor httpContextAccessor) : IUserService
 {
 	private readonly UserManager<ApplicationUser> _userManager = userManager;
 	private readonly IWebHostEnvironment _environment = environment;
 	private readonly ApplicationDbContext _context = context;
 	private readonly IEmailSender _emailSender = emailSender;
 	private readonly ILogger<UserService> _logger = logger;
+	private readonly IHttpContextAccessor _httpContextAccessor = httpContextAccessor;
 	private const long MaxFileSize = 5 * 1024 * 1024; // 5MB
 	private static readonly string[] AllowedExtensions = [".jpg", ".jpeg", ".png", ".webp"];
 
@@ -756,6 +758,28 @@ public class UserService(
 
 			return Result.Failure(
 				new Error(error.Code, error.Description, StatusCodes.Status400BadRequest));
+		}
+
+		try
+		{
+			if (_emailSender is EmailService emailService && !string.IsNullOrEmpty(user.Email))
+			{
+				var changeTime = DateTime.UtcNow.ToString("dddd, MMMM dd, yyyy 'at' HH:mm:ss UTC");
+				
+				var httpContext = _httpContextAccessor.HttpContext;
+				var ipAddress = httpContext?.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
+				var userAgent = httpContext?.Request.Headers.UserAgent.ToString() ?? "Unknown";
+				
+				await emailService.SendPasswordChangedNotificationAsync(
+					user.Email, 
+					changeTime, 
+					ipAddress, 
+					userAgent);
+			}
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "Failed to send password changed notification for user {UserId}", userId);
 		}
 
 		return Result.Success();
