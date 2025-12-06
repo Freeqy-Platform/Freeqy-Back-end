@@ -470,4 +470,54 @@ public class UserService(UserManager<ApplicationUser> userManager, IWebHostEnvir
 
 		return Result.Success(userProfile);
 	}
+
+	public async Task<Result<UserProfileResponse>> UpdatePhoneNumberAsync(string userId, UpdatePhoneNumberRequest request, CancellationToken cancellationToken = default)
+	{
+		var user = await _userManager.FindByIdAsync(userId);
+
+		if (user is null)
+			return Result.Failure<UserProfileResponse>(UserErrors.UserNotFound);
+
+		var newPhoneNumber = request.PhoneNumber.Trim();
+
+		if (user.PhoneNumber == newPhoneNumber)
+			return Result.Failure<UserProfileResponse>(UserErrors.SamePhoneNumber);
+
+		var existingUser = await _userManager.Users
+			.FirstOrDefaultAsync(u => u.PhoneNumber == newPhoneNumber && u.Id != userId, cancellationToken);
+
+		if (existingUser is not null)
+			return Result.Failure<UserProfileResponse>(UserErrors.DuplicatePhoneNumber);
+
+		user.PhoneNumber = newPhoneNumber;
+		user.PhoneNumberConfirmed = false;
+
+		var result = await _userManager.UpdateAsync(user);
+
+		if (!result.Succeeded)
+		{
+			var error = result.Errors.FirstOrDefault();
+			if (error is null)
+			{
+				return Result.Failure<UserProfileResponse>(
+					new Error("User.UpdateFailed", "Failed to update phone number", StatusCodes.Status500InternalServerError));
+			}
+
+			return Result.Failure<UserProfileResponse>(
+				new Error(error.Code, error.Description, StatusCodes.Status400BadRequest));
+		}
+
+		var updatedUser = await _userManager.Users
+			.Where(u => u.Id == userId)
+			.Include(u => u.Certificates)
+			.Include(u => u.Educations)
+			.Include(u => u.SocialMediaLinks)
+			.Include(u => u.Skills)
+			.ThenInclude(us => us.Skill)
+			.Include(u => u.Track)
+			.ProjectToType<UserProfileResponse>()
+			.SingleAsync(cancellationToken);
+
+		return Result.Success(updatedUser);
+	}
 }

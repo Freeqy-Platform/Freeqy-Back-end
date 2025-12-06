@@ -40,4 +40,10 @@ public class UserErrors
 
     public static readonly Error SameUsername =
         new("User.SameUsername", "New username is the same as the current username", StatusCodes.Status400BadRequest);
+
+    public static readonly Error DuplicatePhoneNumber =
+        new("User.DuplicatePhoneNumber", "This phone number is already registered", StatusCodes.Status409Conflict);
+
+    public static readonly Error SamePhoneNumber =
+        new("User.SamePhoneNumber", "New phone number is the same as the current phone number", StatusCodes.Status400BadRequest);
 }
