@@ -23,7 +23,7 @@ services:
       - ACCEPT_EULA=1
       - MSSQL_SA_PASSWORD=Som3a-mssqlserver
     ports:
-      - "1434:1433"
+      - "1433:1433"
     volumes:
       - sql-data:/var/opt/mssql
     healthcheck:
