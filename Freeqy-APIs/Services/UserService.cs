@@ -119,6 +119,14 @@ public class UserService(
 		if (string.IsNullOrEmpty(user.PhotoUrl))
 			return Result.Failure<string>(UserErrors.PhotoNotFound);
 
+		var request = _httpContextAccessor.HttpContext?.Request;
+		if (request is not null)
+		{
+			var baseUrl = $"{request.Scheme}://{request.Host}";
+			var fullPhotoUrl = $"{baseUrl}{user.PhotoUrl}";
+			return Result.Success(fullPhotoUrl);
+		}
+
 		return Result.Success(user.PhotoUrl);
 	}
 
