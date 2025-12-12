@@ -23,7 +23,7 @@ public class UsersController(IUserService userService) : ControllerBase
 	{
 		var result = await _userService.UpdateProfileAsync(User.GetUserId()!, request);
 
-		return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
+		return result.IsSuccess ? NoContent() : result.ToProblem();
 	}
 
 	[HttpGet("{id}")]
@@ -77,7 +77,7 @@ public class UsersController(IUserService userService) : ControllerBase
 	{
 		var result = await _userService.UpdateSkillsAsync(User.GetUserId()!, SkillsRequest, cancellationToken);
 
-		return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
+		return result.IsSuccess ? NoContent() : result.ToProblem();
 	}
 
 	[HttpPut("me/social-links")]
@@ -85,7 +85,7 @@ public class UsersController(IUserService userService) : ControllerBase
 	{
 		var result = await _userService.UpdateSocialLinksAsync(User.GetUserId()!, request, cancellationToken);
 
-		return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
+		return result.IsSuccess ? NoContent() : result.ToProblem();
 	}
 
 	[HttpPut("me/education")]
@@ -93,7 +93,7 @@ public class UsersController(IUserService userService) : ControllerBase
 	{
 		var result = await _userService.UpdateEducationsAsync(User.GetUserId()!, request, cancellationToken);
 
-		return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
+		return result.IsSuccess ? NoContent() : result.ToProblem();
 	}
 
 	[HttpPut("me/certificates")]
@@ -101,7 +101,7 @@ public class UsersController(IUserService userService) : ControllerBase
 	{
 		var result = await _userService.UpdateCertificatesAsync(User.GetUserId()!, request, cancellationToken);
 
-		return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
+		return result.IsSuccess ? NoContent() : result.ToProblem();
 	}
 
 	[HttpPut("me/username")]
@@ -109,7 +109,7 @@ public class UsersController(IUserService userService) : ControllerBase
 	{
 		var result = await _userService.UpdateUsernameAsync(User.GetUserId()!, request, cancellationToken);
 
-		return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
+		return result.IsSuccess ? NoContent() : result.ToProblem();
 	}
 
 	[HttpGet("search/{username}")]
@@ -125,7 +125,7 @@ public class UsersController(IUserService userService) : ControllerBase
 	{
 		var result = await _userService.UpdatePhoneNumberAsync(User.GetUserId()!, request, cancellationToken);
 
-		return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
+		return result.IsSuccess ? NoContent() : result.ToProblem();
 	}
 
 	[HttpPut("me/summary")]
@@ -133,7 +133,7 @@ public class UsersController(IUserService userService) : ControllerBase
 	{
 		var result = await _userService.UpdateSummaryAsync(User.GetUserId()!, request, cancellationToken);
 
-		return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
+		return result.IsSuccess ? NoContent() : result.ToProblem();
 	}
 
 	[HttpPut("me/availability")]
@@ -141,7 +141,7 @@ public class UsersController(IUserService userService) : ControllerBase
 	{
 		var result = await _userService.UpdateAvailabilityAsync(User.GetUserId()!, request, cancellationToken);
 
-		return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
+		return result.IsSuccess ? NoContent() : result.ToProblem();
 	}
 
 	[HttpPut("me/email")]
@@ -149,7 +149,7 @@ public class UsersController(IUserService userService) : ControllerBase
 	{
 		var result = await _userService.UpdateEmailAsync(User.GetUserId()!, request, cancellationToken);
 
-		return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
+		return result.IsSuccess ? NoContent() : result.ToProblem();
 	}
 
 	[HttpPut("me/password")]
