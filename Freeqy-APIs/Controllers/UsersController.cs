@@ -53,7 +53,7 @@ public class UsersController(IUserService userService) : ControllerBase
 	{
 		var result = await _userService.UploadUserPhotoAsync(User.GetUserId()!, request.Photo);
 
-		return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
+		return result.IsSuccess ? Created(string.Empty, result.Value) : result.ToProblem();
 	}
 
 	[HttpDelete("me/photo")]
