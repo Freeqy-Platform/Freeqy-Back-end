@@ -12,12 +12,34 @@ public class ProjectService(ApplicationDbContext dbContext, UserManager<Applicat
     private readonly UserManager<ApplicationUser> _userManager = userManager;
 
     public async Task<Result<ProjectListResponse>> GetProjectsAsync(
+        ProjectRequestFilter filter,
         CancellationToken cancellationToken = default)
     {
-        var projectList = await GetActiveProjects()
-            .AsNoTracking()
+        var query = GetActiveProjects()
+            .Include(p => p.Owner)
+            .Include(p => p.Category)
+            .Include(p => p.Technologies)
+            .AsNoTracking();
+
+        if (!string.IsNullOrWhiteSpace(filter.OwnerId))
+            query = query.Where(p => p.OwnerId == filter.OwnerId);
+
+        if (!string.IsNullOrWhiteSpace(filter.Category))
+            query = query.Where(p => p.Category.Name == filter.Category);
+
+        if (filter.Status.HasValue)
+            query = query.Where(p => p.Status == filter.Status.Value);
+
+        if (filter.Visibility.HasValue)
+            query = query.Where(p => p.Visibility == filter.Visibility.Value);
+
+        if (!string.IsNullOrWhiteSpace(filter.Tech))
+            query = query.Where(p => p.Technologies.Any(t => t.Name == filter.Tech));
+
+        var projectList = await query
             .ProjectToType<ProjectListItemResponse>()
             .ToListAsync(cancellationToken);
+
         return Result.Success(new ProjectListResponse(projectList));
     }
 

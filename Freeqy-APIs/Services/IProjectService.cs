@@ -6,7 +6,7 @@ namespace Freeqy_APIs.Services;
 
 public interface IProjectService
 {
-    Task<Result<ProjectListResponse>> GetProjectsAsync(CancellationToken cancellationToken = default);
+    Task<Result<ProjectListResponse>> GetProjectsAsync(ProjectRequestFilter filter, CancellationToken cancellationToken = default);
 
     Task<Result<TechnologyResponse>> AddTechnologyAsync(TechnologyRequest request,
         CancellationToken cancellationToken = default);
