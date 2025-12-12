@@ -46,4 +46,6 @@ public interface IProjectService
 
     Task<Result> ChangeProjectStatusAsync(string userId, string id, ChangeProjectStatusRequest request,
         CancellationToken cancellationToken = default);
+
+    Task<Result<ProjectMembersResponse>> GetProjectMembersAsync(string projectId, CancellationToken cancellationToken = default);
 }

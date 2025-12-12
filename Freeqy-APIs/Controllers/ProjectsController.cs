@@ -131,4 +131,11 @@ public class ProjectsController(IProjectService projectService) : ControllerBase
             cancellationToken);
         return result.IsSuccess ? NoContent() : result.ToProblem();
     }
+
+    [HttpGet("{projectId}/members")]
+    public async Task<IActionResult> GetProjectMembers(string projectId, CancellationToken cancellationToken)
+    {
+        var result = await _projectService.GetProjectMembersAsync(projectId, cancellationToken);
+        return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
+    }
 }

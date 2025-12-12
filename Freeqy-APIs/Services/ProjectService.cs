@@ -332,4 +332,32 @@ public class ProjectService(ApplicationDbContext dbContext, UserManager<Applicat
         return Result.Success();
 
     }
+
+    public async Task<Result<ProjectMembersResponse>> GetProjectMembersAsync(string projectId, CancellationToken cancellationToken = default)
+    {
+        var project = await _dbContext.Projects
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.Id == projectId && p.DeletedAt == null, cancellationToken);
+
+        if (project is null)
+            return Result.Failure<ProjectMembersResponse>(ProjectErrors.NotFound);
+
+        var members = await _dbContext.ProjectMembers
+            .Include(pm => pm.User)
+            .Where(pm => pm.ProjectId == projectId)
+            .AsNoTracking()
+            .Select(pm => new ProjectMemberDto(
+                pm.UserId,
+                pm.User.FirstName,
+                pm.User.LastName,
+                pm.User.Email,
+                pm.User.PhotoUrl,
+                pm.Role,
+                pm.IsActive,
+                pm.JoinedAt
+            ))
+            .ToListAsync(cancellationToken);
+
+        return Result.Success(new ProjectMembersResponse(members));
+    }
 }
