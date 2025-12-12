@@ -360,4 +360,30 @@ public class ProjectService(ApplicationDbContext dbContext, UserManager<Applicat
 
         return Result.Success(new ProjectMembersResponse(members));
     }
+
+    public async Task<Result> UpdateMemberRoleAsync(string projectId, string userId, string memberId, UpdateMemberRoleRequest request, CancellationToken cancellationToken = default)
+    {
+        var project = await GetActiveProjects()
+            .FirstOrDefaultAsync(p => p.Id == projectId, cancellationToken);
+
+        if (project is null)
+            return Result.Failure(ProjectErrors.NotFound);
+
+        if (project.OwnerId != userId)
+            return Result.Failure(ProjectErrors.Forbidden);
+
+        if (memberId == userId)
+            return Result.Failure(new Error("Project.CannotChangeOwnRole", "You cannot change your own role", StatusCodes.Status400BadRequest));
+
+        var projectMember = await _dbContext.ProjectMembers
+            .FirstOrDefaultAsync(pm => pm.ProjectId == projectId && pm.UserId == memberId, cancellationToken);
+
+        if (projectMember is null)
+            return Result.Failure(ProjectErrors.MemberNotFound);
+
+        projectMember.Role = request.Role;
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return Result.Success();
+    }
 }

@@ -48,4 +48,6 @@ public interface IProjectService
         CancellationToken cancellationToken = default);
 
     Task<Result<ProjectMembersResponse>> GetProjectMembersAsync(string projectId, CancellationToken cancellationToken = default);
+
+    Task<Result> UpdateMemberRoleAsync(string projectId, string userId, string memberId, UpdateMemberRoleRequest request, CancellationToken cancellationToken = default);
 }

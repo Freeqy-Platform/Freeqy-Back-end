@@ -138,4 +138,12 @@ public class ProjectsController(IProjectService projectService) : ControllerBase
         var result = await _projectService.GetProjectMembersAsync(projectId, cancellationToken);
         return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
     }
+
+    [HttpPatch("{projectId}/members/{memberId}/role")]
+    [Authorize]
+    public async Task<IActionResult> UpdateMemberRole(string projectId, string memberId, [FromBody] UpdateMemberRoleRequest request, CancellationToken cancellationToken)
+    {
+        var result = await _projectService.UpdateMemberRoleAsync(projectId, User.GetUserId()!, memberId, request, cancellationToken);
+        return result.IsSuccess ? NoContent() : result.ToProblem();
+    }
 }
