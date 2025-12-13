@@ -10,6 +10,14 @@ public static class Dependenceies
     {
         services.AddControllers();
 
+        services.AddCors(options => 
+            options.AddDefaultPolicy(builder => 
+                builder.AllowAnyOrigin()
+                    .AllowAnyMethod()
+                    .AllowAnyHeader()
+            )
+        );
+
         services.AddAuthConfig(configuration);
 
         var connectionString = configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");

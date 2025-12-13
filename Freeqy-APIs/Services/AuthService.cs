@@ -15,6 +15,8 @@ public class AuthService(UserManager<ApplicationUser> userManager, IJwtProvider 
     private readonly ILogger<AuthService> _logger = logger;
     private readonly IHttpContextAccessor _httpContextAccessor = accessor;
     private readonly IEmailSender _emailService = emailService;
+    private readonly string _tempOrigin = "http://localhost:5173";
+    
 
     public async Task<Result<AuthResponse>> GetTokenAsync(string emailOrUsername, string password, CancellationToken cancellationToken = default)
     {
@@ -195,7 +197,7 @@ public class AuthService(UserManager<ApplicationUser> userManager, IJwtProvider 
             emailBody: new Dictionary<string, string>
             {
                 { "{{name}}", user.FirstName },
-                { "{{action_url}}", $"{origin}/auth/emailConfirmation?userId={user.Id}&code={code}" }
+                { "{{action_url}}", $"{_tempOrigin}/emailConfirmation?userId={user.Id}&code={code}" }
             }
         );
         
@@ -211,7 +213,7 @@ public class AuthService(UserManager<ApplicationUser> userManager, IJwtProvider 
             new Dictionary<string, string>
             {
                 {"{{name}}", user.FirstName },
-                { "{{action_url}}", $"{origin}/auth/resetPassword?userId={user.Id}&code={code}" }
+                { "{{action_url}}", $"{_tempOrigin}/resetPassword?userId={user.Id}&code={code}" }
             }
         );
         
