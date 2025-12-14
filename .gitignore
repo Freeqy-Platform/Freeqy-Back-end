@@ -75,7 +75,7 @@ Migrations/
 # ---------------------------
 # Don’t ignore appsettings.json (important for app config),
 # but ignore local overrides:
-!appsettings.Development.json
+appsettings.Development.json
 !appsettings.json
 
 # ---------------------------
