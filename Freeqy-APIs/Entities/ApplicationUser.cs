@@ -16,7 +16,7 @@ public sealed class ApplicationUser : IdentityUser
 	public UserAvailability Availability { get; set; } = UserAvailability.Available;
 
 	public Track? Track { get; set; }
-	public IEnumerable<RefreshToken> RefreshTokens { get; set; } = [];
+	public List<RefreshToken> RefreshTokens { get; set; } = [];
 	public ICollection<UserSkill> Skills { set; get; } = [];
 	public ICollection<ProjectMembers> ProjectMembers { get; set; } = new List<ProjectMembers>();
 

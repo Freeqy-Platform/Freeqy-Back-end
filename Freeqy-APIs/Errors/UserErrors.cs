@@ -10,6 +10,9 @@ public class UserErrors
 
     public static readonly Error EmailNotConfirmed =
         new("User.EmailNotConfirmed", "Email is not confirmed", StatusCodes.Status401Unauthorized);
+    
+    public static readonly Error InvalidRefreshToken =
+        new("User.InvalidRefreshToken", "Invalid refresh token", StatusCodes.Status401Unauthorized);
 
     public static readonly Error LockedUser =
         new("User.LockedUser", "Locked user, please contact with administrator", StatusCodes.Status401Unauthorized);

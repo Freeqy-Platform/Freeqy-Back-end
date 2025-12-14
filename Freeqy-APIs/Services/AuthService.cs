@@ -1,4 +1,5 @@
-﻿using Freeqy_APIs.Helper;
+﻿using System.Security.Cryptography;
+using Freeqy_APIs.Helper;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.WebUtilities;
 using static Freeqy_APIs.Contracts.Authentication.RegisterRequest;
@@ -16,7 +17,7 @@ public class AuthService(UserManager<ApplicationUser> userManager, IJwtProvider 
     private readonly IHttpContextAccessor _httpContextAccessor = accessor;
     private readonly IEmailSender _emailService = emailService;
     private readonly string _tempOrigin = "http://localhost:5173";
-    
+    private readonly int _refreshTokenExpiryInDays = 15;
 
     public async Task<Result<AuthResponse>> GetTokenAsync(string emailOrUsername, string password, CancellationToken cancellationToken = default)
     {
@@ -43,8 +44,19 @@ public class AuthService(UserManager<ApplicationUser> userManager, IJwtProvider 
         if (result.Succeeded)
         {
             var (token, expiresIn) = _jwtProvider.GenerateToken(user);
+            var refreshToken = GenerateRefreshToken();
+            var refreshTokenExpiryDate = DateTime.UtcNow.AddDays(_refreshTokenExpiryInDays);
 
-            var response = new AuthResponse(user.Id, user.FirstName, user.LastName, user.Email, token, expiresIn);
+            user.RefreshTokens.Add(new RefreshToken()
+                {
+                    Token = refreshToken,
+                    ExpiresOn = refreshTokenExpiryDate
+                }
+            );
+            
+            await _userManager.UpdateAsync(user);
+
+            var response = new AuthResponse(user.Id, user.FirstName, user.LastName, user.Email, token, expiresIn, refreshToken, refreshTokenExpiryDate);
 
             return Result.Success(response);
         }   
@@ -56,6 +68,95 @@ public class AuthService(UserManager<ApplicationUser> userManager, IJwtProvider 
             : UserErrors.InvalidCredentials;
 
         return Result.Failure<AuthResponse>(new Error(error.Code, error.Description, StatusCodes.Status400BadRequest));
+    }
+
+    public async Task<Result<AuthResponse>> GetRefreshTokenAsync(string token, string refreshToken,
+        CancellationToken cancellationToken = default)
+    {
+        string? userId = _jwtProvider.ValidateToken(token);
+
+        if (userId is null)
+        {
+            return Result.Failure<AuthResponse>(UserErrors.InvalidToken);
+        }
+        
+        var user = await _userManager.FindByIdAsync(userId);
+
+        if (user is null)
+        {
+            return Result.Failure<AuthResponse>(UserErrors.InvalidToken);
+        }
+
+        if (user.LockoutEnd > DateTime.UtcNow)
+        {
+            return Result.Failure<AuthResponse>(UserErrors.LockedUser);
+        }
+        
+        var userRefreshToken = user.RefreshTokens.SingleOrDefault(x => x.Token == refreshToken && !x.IsRevoked);
+
+        if (userRefreshToken is null)
+        {
+            return Result.Failure<AuthResponse>(UserErrors.InvalidRefreshToken);
+        }
+        
+        userRefreshToken.RevokedOn = DateTime.UtcNow;
+        
+        var (newToken, expiresIn) = _jwtProvider.GenerateToken(user);
+        var newRefreshToken = GenerateRefreshToken();
+        var refreshTokenExpiryDate = DateTime.UtcNow.AddDays(_refreshTokenExpiryInDays);
+
+        user.RefreshTokens.Add(new RefreshToken()
+            {
+                Token = refreshToken,
+                ExpiresOn = refreshTokenExpiryDate
+            }
+        );
+            
+        await _userManager.UpdateAsync(user);
+
+        var response = new AuthResponse(user.Id, user.FirstName, user.LastName, user.Email, token, expiresIn, refreshToken, refreshTokenExpiryDate);
+
+        return Result.Success(response);
+    }
+
+    public async Task<Result> RevokeRefreshTokenAsync(string token, string refreshToken,
+        CancellationToken cancellationToken = default)
+    {
+        string? userId = _jwtProvider.ValidateToken(token);
+
+        if (userId is null)
+        {
+            return Result.Failure<AuthResponse>(UserErrors.InvalidToken);
+        }
+        
+        var user = await _userManager.FindByIdAsync(userId);
+
+        if (user is null)
+        {
+            return Result.Failure<AuthResponse>(UserErrors.InvalidToken);
+        }
+
+        if (user.LockoutEnd > DateTime.UtcNow)
+        {
+            return Result.Failure<AuthResponse>(UserErrors.LockedUser);
+        }
+        
+        var userRefreshToken = user.RefreshTokens.SingleOrDefault(x => x.Token == refreshToken && !x.IsRevoked);
+
+        if (userRefreshToken is null)
+        {
+            return Result.Failure<AuthResponse>(UserErrors.InvalidRefreshToken);
+        }
+        
+        userRefreshToken.RevokedOn = DateTime.UtcNow;
+
+        await _userManager.UpdateAsync(user);
+
+        return Result.Success();
+    }
+    private static string GenerateRefreshToken()
+    {
+        return Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
     }
 
     public async Task<Result> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
