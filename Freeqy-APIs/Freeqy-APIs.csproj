@@ -7,6 +7,9 @@
         <RootNamespace>Freeqy_APIs</RootNamespace>
         <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
         <UserSecretsId>2eaf4120-f414-4105-a5a5-589aa01f902f</UserSecretsId>
+        <!-- Generate XML documentation for Swagger -->
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <NoWarn>$(NoWarn);1591</NoWarn>
     </PropertyGroup>
 
     <ItemGroup>
