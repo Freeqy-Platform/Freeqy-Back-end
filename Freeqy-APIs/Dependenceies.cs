@@ -60,6 +60,17 @@ public static class Dependenceies
                     Array.Empty<string>()
                 }
             });
+
+            // Include XML comments (for better documentation) and other helpful settings
+            var xmlFile = System.Reflection.Assembly.GetExecutingAssembly().GetName().Name + ".xml";
+            var xmlPath = System.IO.Path.Combine(AppContext.BaseDirectory, xmlFile);
+            if (System.IO.File.Exists(xmlPath))
+            {
+                options.IncludeXmlComments(xmlPath, includeControllerXmlComments: true);
+            }
+
+            options.SupportNonNullableReferenceTypes();
+            options.CustomSchemaIds(type => type.FullName);
         });
 
         //Add Mapster
