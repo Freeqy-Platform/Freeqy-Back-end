@@ -199,8 +199,17 @@ public class UserService(
 				new Error(error.Code, error.Description, StatusCodes.Status400BadRequest));
 		}
 
-		// 10. Return success response
-		var response = new UploadPhotoResponse(photoUrl, "Profile photo uploaded successfully");
+		// 10. Build full photo URL
+		var fullPhotoUrl = photoUrl;
+		var request = _httpContextAccessor.HttpContext?.Request;
+		if (request is not null)
+		{
+			var baseUrl = $"{request.Scheme}://{request.Host}";
+			fullPhotoUrl = $"{baseUrl}{photoUrl}";
+		}
+
+		// 11. Return success response
+		var response = new UploadPhotoResponse(fullPhotoUrl, "Profile photo uploaded successfully");
 		return Result.Success(response);
 	}
 
