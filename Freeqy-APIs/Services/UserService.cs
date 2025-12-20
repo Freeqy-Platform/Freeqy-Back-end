@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity.UI.Services;
+﻿using Freeqy_APIs.Contracts.Tracks;
+using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
 using System.Linq;
 
@@ -33,40 +34,71 @@ public class UserService(
 
 	public async Task<Result<UserProfileResponse>> UpdateProfileAsync(string userId, UpdateUserProfileRequest request)
 	{
-		if (await _userManager.FindByIdAsync(userId) is not { } user)
+		var user = await _userManager.Users
+			.Include(u => u.Track)
+			.SingleOrDefaultAsync(u => u.Id == userId);
+
+		if (user is null)
 			return Result.Failure<UserProfileResponse>(UserErrors.UserNotFound);
 
-		var hasChanges = user.FirstName != request.FirstName || user.LastName != request.LastName;
+		var hasChanges = false;
+
+		if (!string.IsNullOrWhiteSpace(request.FirstName) && user.FirstName != request.FirstName)
+		{
+			user.FirstName = request.FirstName.Trim();
+			hasChanges = true;
+		}
+
+		if (!string.IsNullOrWhiteSpace(request.LastName) && user.LastName != request.LastName)
+		{
+			user.LastName = request.LastName.Trim();
+			hasChanges = true;
+		}
 
 		if (!hasChanges)
 		{
-			var profile = user.Adapt<UserProfileResponse>();
+			var updatedUser = await _userManager.Users
+				.Where(u => u.Id == userId)
+				.Include(u => u.Certificates)
+				.Include(u => u.Educations)
+				.Include(u => u.SocialMediaLinks)
+				.Include(u => u.Skills)
+				.ThenInclude(us => us.Skill)
+				.Include(u => u.Track)
+				.ProjectToType<UserProfileResponse>()
+				.SingleAsync();
 
-			return Result.Success(profile);
+			return Result.Success(updatedUser);
 		}
-
-		user.FirstName = request.FirstName;
-		user.LastName = request.LastName;
 
 		var result = await _userManager.UpdateAsync(user);
 
-		if (result.Succeeded)
+		if (!result.Succeeded)
 		{
-			var response = user.Adapt<UserProfileResponse>();
+			var error = result.Errors.FirstOrDefault();
 
-			return Result.Success(response);
-		}
+			if (error is null)
+			{
+				return Result.Failure<UserProfileResponse>(
+					new Error("User.UpdateFailed", "Failed to update user profile", StatusCodes.Status500InternalServerError));
+			}
 
-		var error = result.Errors.FirstOrDefault();
-
-		if (error is null)
-		{
 			return Result.Failure<UserProfileResponse>(
-				new Error("User.UpdateFailed", "Failed to update user profile", StatusCodes.Status500InternalServerError));
+				new Error(error.Code, error.Description, StatusCodes.Status400BadRequest));
 		}
 
-		return Result.Failure<UserProfileResponse>(
-			new Error(error.Code, error.Description, StatusCodes.Status400BadRequest));
+		var response = await _userManager.Users
+			.Where(u => u.Id == userId)
+			.Include(u => u.Certificates)
+			.Include(u => u.Educations)
+			.Include(u => u.SocialMediaLinks)
+			.Include(u => u.Skills)
+			.ThenInclude(us => us.Skill)
+			.Include(u => u.Track)
+			.ProjectToType<UserProfileResponse>()
+			.SingleAsync();
+
+		return Result.Success(response);
 	}
 
 	public async Task<Result<UserProfileResponse>> GetUserByIdAsync(string userId, CancellationToken cancellationToken = default)
@@ -820,4 +852,542 @@ public class UserService(
 		_logger.LogInformation("Email confirmed successfully for user {UserId}", userId);
 		return Result.Success();
 	}
+
+	public async Task<Result<UserProfileResponse>> UpdateTrackAsync(string userId, UpdateTrackRequest request, CancellationToken cancellationToken = default)
+	{
+		var user = await _userManager.FindByIdAsync(userId);
+
+		if (user is null)
+			return Result.Failure<UserProfileResponse>(UserErrors.UserNotFound);
+
+		var trackName = request.TrackName.Trim();
+		
+		// Try to find exact match
+		var track = await _context.Tracks
+			.FirstOrDefaultAsync(t => t.Name.ToLower() == trackName.ToLower(), cancellationToken);
+		
+		if (track is null)
+		{
+			// Find similar tracks
+			var allTracks = await _context.Tracks
+				.AsNoTracking()
+				.ToListAsync(cancellationToken);
+			
+			var similarTracks = allTracks
+				.Where(t => 
+					t.Name.Contains(trackName, StringComparison.OrdinalIgnoreCase) ||
+					trackName.Contains(t.Name, StringComparison.OrdinalIgnoreCase) ||
+					LevenshteinDistance(t.Name.ToLower(), trackName.ToLower()) <= 3)
+				.Select(t => t.Name)
+				.Take(5)
+				.ToList();
+
+			if (similarTracks.Any())
+			{
+				var suggestionsMessage = $"Track '{trackName}' not found. Did you mean: {string.Join(", ", similarTracks)}? " +
+				                        $"Or send the same request again with confirmCreate=true to create this new track.";
+				
+				return Result.Failure<UserProfileResponse>(
+					new Error("Track.NotFoundWithSuggestions", 
+					         suggestionsMessage, 
+					         StatusCodes.Status404NotFound));
+			}
+
+			// No similar tracks found - suggest creating
+			return Result.Failure<UserProfileResponse>(
+				new Error("Track.NotFound", 
+				         $"Track '{trackName}' does not exist. Send the request again with confirmCreate=true to create this new track.", 
+				         StatusCodes.Status404NotFound));
+		}
+
+		// Check if already the same
+		if (user.TrackId == track.Id)
+		{
+			var currentProfile = await _userManager.Users
+				.Where(u => u.Id == userId)
+				.Include(u => u.Certificates)
+				.Include(u => u.Educations)
+				.Include(u => u.SocialMediaLinks)
+				.Include(u => u.Skills)
+				.ThenInclude(us => us.Skill)
+				.Include(u => u.Track)
+				.ProjectToType<UserProfileResponse>()
+				.SingleAsync(cancellationToken);
+
+			return Result.Success(currentProfile);
+		}
+
+		user.TrackId = track.Id;
+
+		var result = await _userManager.UpdateAsync(user);
+
+		if (!result.Succeeded)
+		{
+			var error = result.Errors.FirstOrDefault();
+			if (error is null)
+			{
+				return Result.Failure<UserProfileResponse>(
+					new Error("User.UpdateFailed", "Failed to update user track", StatusCodes.Status500InternalServerError));
+			}
+
+			return Result.Failure<UserProfileResponse>(
+				new Error(error.Code, error.Description, StatusCodes.Status400BadRequest));
+		}
+
+		var updatedUser = await _userManager.Users
+			.Where(u => u.Id == userId)
+			.Include(u => u.Certificates)
+			.Include(u => u.Educations)
+			.Include(u => u.SocialMediaLinks)
+			.Include(u => u.Skills)
+			.ThenInclude(us => us.Skill)
+			.Include(u => u.Track)
+			.ProjectToType<UserProfileResponse>()
+			.SingleAsync(cancellationToken);
+
+		return Result.Success(updatedUser);
+	}
+
+	public async Task<Result<UserProfileResponse>> UpdateTrackWithConfirmAsync(
+		string userId, 
+		UpdateTrackWithConfirmRequest request, 
+		CancellationToken cancellationToken = default)
+	{
+		var user = await _userManager.FindByIdAsync(userId);
+
+		if (user is null)
+			return Result.Failure<UserProfileResponse>(UserErrors.UserNotFound);
+
+		var trackName = request.TrackName.Trim();
+		
+		// Try to find exact match
+		var track = await _context.Tracks
+			.FirstOrDefaultAsync(t => t.Name.ToLower() == trackName.ToLower(), cancellationToken);
+		
+		// If track doesn't exist and user wants to create
+		if (track is null && request.ConfirmCreate)
+		{
+			// Instead of creating directly, create a track request
+			var createRequestResult = await CreateTrackRequestAsync(
+				userId, 
+				new CreateTrackRequestDto(trackName), 
+				cancellationToken);
+			
+			if (createRequestResult.IsFailure)
+			{
+				return Result.Failure<UserProfileResponse>(createRequestResult.Error);
+			}
+			
+			return Result.Failure<UserProfileResponse>(
+				new Error("Track.RequestSubmitted", 
+				         $"Your request for track '{trackName}' has been submitted and will be reviewed by our team. You'll be notified once it's approved.", 
+				         StatusCodes.Status202Accepted));
+		}
+		else if (track is null)
+		{
+			// Find similar tracks for suggestion
+			var allTracks = await _context.Tracks
+				.AsNoTracking()
+				.ToListAsync(cancellationToken);
+			
+			var similarTracks = allTracks
+				.Where(t => 
+					t.Name.Contains(trackName, StringComparison.OrdinalIgnoreCase) ||
+					trackName.Contains(t.Name, StringComparison.OrdinalIgnoreCase) ||
+					LevenshteinDistance(t.Name.ToLower(), trackName.ToLower()) <= 3)
+				.Select(t => t.Name)
+				.Take(5)
+				.ToList();
+
+			if (similarTracks.Any())
+			{
+				var suggestionsMessage = $"Track '{trackName}' not found. Did you mean: {string.Join(", ", similarTracks)}? " +
+				                        $"Or send the same request with confirmCreate=true to submit a request for this new track.";
+				
+				return Result.Failure<UserProfileResponse>(
+					new Error("Track.NotFoundWithSuggestions", 
+					         suggestionsMessage, 
+					         StatusCodes.Status404NotFound));
+			}
+
+			// No similar tracks - inform about request option
+			return Result.Failure<UserProfileResponse>(
+				new Error("Track.NotFound", 
+				         $"Track '{trackName}' does not exist. Send the request with confirmCreate=true to submit a request for it.", 
+				         StatusCodes.Status404NotFound));
+		}
+
+		// Check if already the same
+		if (user.TrackId == track.Id)
+		{
+			var currentProfile = await _userManager.Users
+				.Where(u => u.Id == userId)
+				.Include(u => u.Certificates)
+				.Include(u => u.Educations)
+				.Include(u => u.SocialMediaLinks)
+				.Include(u => u.Skills)
+				.ThenInclude(us => us.Skill)
+				.Include(u => u.Track)
+				.ProjectToType<UserProfileResponse>()
+				.SingleAsync(cancellationToken);
+
+			return Result.Success(currentProfile);
+		}
+
+		user.TrackId = track.Id;
+
+		var result = await _userManager.UpdateAsync(user);
+
+		if (!result.Succeeded)
+		{
+			var error = result.Errors.FirstOrDefault();
+			if (error is null)
+			{
+				return Result.Failure<UserProfileResponse>(
+					new Error("User.UpdateFailed", "Failed to update user track", StatusCodes.Status500InternalServerError));
+			}
+
+			return Result.Failure<UserProfileResponse>(
+				new Error(error.Code, error.Description, StatusCodes.Status400BadRequest));
+		}
+
+		var updatedUser = await _userManager.Users
+			.Where(u => u.Id == userId)
+			.Include(u => u.Certificates)
+			.Include(u => u.Educations)
+			.Include(u => u.SocialMediaLinks)
+			.Include(u => u.Skills)
+			.ThenInclude(us => us.Skill)
+			.Include(u => u.Track)
+			.ProjectToType<UserProfileResponse>()
+			.SingleAsync(cancellationToken);
+
+		return Result.Success(updatedUser);
+	}
+
+	// Helper method for fuzzy matching
+	private static int LevenshteinDistance(string source, string target)
+	{
+		if (string.IsNullOrEmpty(source))
+			return string.IsNullOrEmpty(target) ? 0 : target.Length;
+
+		if (string.IsNullOrEmpty(target))
+			return source.Length;
+
+		var distance = new int[source.Length + 1, target.Length + 1];
+
+		for (var i = 0; i <= source.Length; i++)
+			distance[i, 0] = i;
+
+		for (var j = 0; j <= target.Length; j++)
+			distance[0, j] = j;
+
+		for (var i = 1; i <= source.Length; i++)
+		{
+			for (var j = 1; j <= target.Length; j++)
+			{
+				var cost = target[j - 1] == source[i - 1] ? 0 : 1;
+
+				distance[i, j] = Math.Min(
+					Math.Min(distance[i - 1, j] + 1, distance[i, j - 1] + 1),
+					distance[i - 1, j - 1] + cost);
+			}
+		}
+
+		return distance[source.Length, target.Length];
+	}
+
+	public async Task<Result<List<TrackResponse>>> GetTracksAsync(CancellationToken cancellationToken = default)
+	{
+		var tracks = await _context.Tracks
+			.AsNoTracking()
+			.OrderBy(t => t.Name)
+			.ProjectToType<TrackResponse>()
+			.ToListAsync(cancellationToken);
+
+		return Result.Success(tracks);
+	}
+
+	#region Track Request System
+
+	public async Task<Result<TrackRequestResponse>> CreateTrackRequestAsync(
+		string userId, 
+		CreateTrackRequestDto request, 
+		CancellationToken cancellationToken = default)
+	{
+		var trackName = request.TrackName.Trim();
+		
+		// Check if track already exists
+		var existingTrack = await _context.Tracks
+			.FirstOrDefaultAsync(t => t.Name.ToLower() == trackName.ToLower(), cancellationToken);
+		
+		if (existingTrack is not null)
+		{
+			return Result.Failure<TrackRequestResponse>(
+				new Error("Track.AlreadyExists", 
+				         $"Track '{trackName}' already exists. You can select it directly.", 
+				         StatusCodes.Status400BadRequest));
+		}
+		
+		// Check for pending request with same name
+		var duplicateRequest = await _context.TrackRequests
+			.FirstOrDefaultAsync(tr => 
+				tr.TrackName.ToLower() == trackName.ToLower() && 
+				tr.Status == TrackRequestStatus.Pending, 
+				cancellationToken);
+		
+		if (duplicateRequest is not null)
+		{
+			return Result.Failure<TrackRequestResponse>(UserErrors.DuplicateTrackRequest);
+		}
+		
+		// ✅ NEW: Monthly Rate Limiting - Check requests in current month
+		var currentMonthStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
+		var requestsThisMonth = await _context.TrackRequests
+			.Where(tr => tr.RequestedBy == userId && tr.CreatedAt >= currentMonthStart)
+			.CountAsync(cancellationToken);
+		
+		if (requestsThisMonth >= 3)
+		{
+			return Result.Failure<TrackRequestResponse>(
+				new Error("TrackRequest.MonthlyLimitExceeded", 
+				         "You have reached the maximum limit of 3 track requests per month. Please try again next month.", 
+				         StatusCodes.Status429TooManyRequests));
+		}
+		
+		// ✅ Daily Rate Limiting - Check if user has submitted a request in last 24 hours
+		var yesterday = DateTime.UtcNow.AddHours(-24);
+		var recentRequest = await _context.TrackRequests
+			.Where(tr => tr.RequestedBy == userId && tr.CreatedAt >= yesterday)
+			.FirstOrDefaultAsync(cancellationToken);
+		
+		if (recentRequest is not null)
+		{
+			return Result.Failure<TrackRequestResponse>(
+				new Error("TrackRequest.DailyLimitExceeded", 
+				         "You can only submit one track request per day. Please try again tomorrow.", 
+				         StatusCodes.Status429TooManyRequests));
+		}
+		
+		// Create track request
+		var trackRequest = new TrackRequest
+		{
+			RequestedBy = userId,
+			TrackName = trackName,
+			Status = TrackRequestStatus.Pending,
+			CreatedAt = DateTime.UtcNow
+		};
+		
+		_context.TrackRequests.Add(trackRequest);
+		await _context.SaveChangesAsync(cancellationToken);
+		
+		_logger.LogInformation("Track request created: {TrackName} by user {UserId}. Monthly count: {Count}/3", 
+		                      trackName, userId, requestsThisMonth + 1);
+		
+		var response = new TrackRequestResponse(
+			trackRequest.Id,
+			trackRequest.TrackName,
+			trackRequest.Status.ToString(),
+			trackRequest.CreatedAt,
+			null,
+			null
+		);
+		
+		return Result.Success(response);
+	}
+
+	public async Task<Result<TrackRequestListResponse>> GetUserTrackRequestsAsync(
+		string userId, 
+		CancellationToken cancellationToken = default)
+	{
+		var requests = await _context.TrackRequests
+			.Where(tr => tr.RequestedBy == userId)
+			.Include(tr => tr.MergedIntoTrack)
+			.OrderByDescending(tr => tr.CreatedAt)
+			.ToListAsync(cancellationToken);
+		
+		var response = requests.Select(tr => new TrackRequestResponse(
+			tr.Id,
+			tr.TrackName,
+			tr.Status.ToString(),
+			tr.CreatedAt,
+			tr.RejectionReason,
+			tr.MergedIntoTrack?.Name
+		)).ToList();
+		
+		var listResponse = new TrackRequestListResponse(
+			response,
+			requests.Count,
+			requests.Count(r => r.Status == TrackRequestStatus.Pending),
+			requests.Count(r => r.Status == TrackRequestStatus.Approved),
+			requests.Count(r => r.Status == TrackRequestStatus.Rejected)
+		);
+		
+		return Result.Success(listResponse);
+	}
+
+	public async Task<Result<UserTrackRequestStatsResponse>> GetUserTrackRequestStatsAsync(
+		string userId, 
+		CancellationToken cancellationToken = default)
+	{
+		// Current month start date
+		var currentMonthStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
+		
+		// Count requests in current month
+		var monthlyRequestsUsed = await _context.TrackRequests
+			.Where(tr => tr.RequestedBy == userId && tr.CreatedAt >= currentMonthStart)
+			.CountAsync(cancellationToken);
+		
+		// Last request date
+		var lastRequest = await _context.TrackRequests
+			.Where(tr => tr.RequestedBy == userId)
+			.OrderByDescending(tr => tr.CreatedAt)
+			.FirstOrDefaultAsync(cancellationToken);
+		
+		// Can request today?
+		var yesterday = DateTime.UtcNow.AddHours(-24);
+		var canRequestToday = lastRequest == null || lastRequest.CreatedAt < yesterday;
+		
+		// Next available date
+		DateTime? nextAvailableDate = null;
+		if (lastRequest != null && !canRequestToday)
+		{
+			nextAvailableDate = lastRequest.CreatedAt.AddHours(24);
+		}
+		
+		var stats = new UserTrackRequestStatsResponse(
+			MonthlyRequestsUsed: monthlyRequestsUsed,
+			MonthlyRequestsRemaining: Math.Max(0, 3 - monthlyRequestsUsed),
+			MonthlyLimit: 3,
+			CanRequestToday: canRequestToday && monthlyRequestsUsed < 3,
+			LastRequestDate: lastRequest?.CreatedAt,
+			NextAvailableDate: nextAvailableDate
+		);
+		
+		return Result.Success(stats);
+	}
+
+	public async Task<Result<TrackRequestListResponse>> GetAllTrackRequestsAsync(
+		TrackRequestStatus? status, 
+		CancellationToken cancellationToken = default)
+	{
+		var query = _context.TrackRequests
+			.Include(tr => tr.User)
+			.Include(tr => tr.MergedIntoTrack)
+			.AsQueryable();
+		
+		if (status.HasValue)
+		{
+			query = query.Where(tr => tr.Status == status.Value);
+		}
+		
+		var requests = await query
+			.OrderByDescending(tr => tr.CreatedAt)
+			.ToListAsync(cancellationToken);
+		
+		var response = requests.Select(tr => new TrackRequestResponse(
+			tr.Id,
+			tr.TrackName,
+			tr.Status.ToString(),
+			tr.CreatedAt,
+			tr.RejectionReason,
+			tr.MergedIntoTrack?.Name
+		)).ToList();
+		
+		var listResponse = new TrackRequestListResponse(
+			response,
+			requests.Count,
+			requests.Count(r => r.Status == TrackRequestStatus.Pending),
+			requests.Count(r => r.Status == TrackRequestStatus.Approved),
+			requests.Count(r => r.Status == TrackRequestStatus.Rejected)
+		);
+		
+		return Result.Success(listResponse);
+	}
+
+	public async Task<Result> ApproveTrackRequestAsync(
+		string adminId, 
+		ApproveTrackRequestDto request, 
+		CancellationToken cancellationToken = default)
+	{
+		var trackRequest = await _context.TrackRequests
+			.FirstOrDefaultAsync(tr => tr.Id == request.RequestId, cancellationToken);
+		
+		if (trackRequest is null)
+		{
+			return Result.Failure(UserErrors.TrackRequestNotFound);
+		}
+		
+		if (trackRequest.Status != TrackRequestStatus.Pending)
+		{
+			return Result.Failure(UserErrors.TrackRequestAlreadyProcessed);
+		}
+		
+		if (request.CreateNewTrack)
+		{
+			// Create new track
+			var newTrack = new Track { Name = trackRequest.TrackName };
+			_context.Tracks.Add(newTrack);
+			await _context.SaveChangesAsync(cancellationToken);
+			
+			trackRequest.MergedIntoTrackId = newTrack.Id;
+			_logger.LogInformation("New track '{TrackName}' created from request {RequestId}", 
+			                      newTrack.Name, request.RequestId);
+		}
+		else if (request.MergeIntoTrackId.HasValue)
+		{
+			// Merge into existing track
+			var existingTrack = await _context.Tracks.FindAsync(request.MergeIntoTrackId.Value);
+			if (existingTrack is null)
+			{
+				return Result.Failure(
+					new Error("Track.NotFound", "Target track not found", StatusCodes.Status404NotFound));
+			}
+			
+			trackRequest.MergedIntoTrackId = request.MergeIntoTrackId.Value;
+			_logger.LogInformation("Track request {RequestId} merged into track '{TrackName}'", 
+			                      request.RequestId, existingTrack.Name);
+		}
+		
+		trackRequest.Status = request.CreateNewTrack ? TrackRequestStatus.Approved : TrackRequestStatus.Merged;
+		trackRequest.ApprovedBy = adminId;
+		trackRequest.ApprovedAt = DateTime.UtcNow;
+		
+		await _context.SaveChangesAsync(cancellationToken);
+		
+		return Result.Success();
+	}
+
+	public async Task<Result> RejectTrackRequestAsync(
+		string adminId, 
+		RejectTrackRequestDto request, 
+		CancellationToken cancellationToken = default)
+	{
+		var trackRequest = await _context.TrackRequests
+			.FirstOrDefaultAsync(tr => tr.Id == request.RequestId, cancellationToken);
+		
+		if (trackRequest is null)
+		{
+			return Result.Failure(UserErrors.TrackRequestNotFound);
+		}
+		
+		if (trackRequest.Status != TrackRequestStatus.Pending)
+		{
+			return Result.Failure(UserErrors.TrackRequestAlreadyProcessed);
+		}
+		
+		trackRequest.Status = TrackRequestStatus.Rejected;
+		trackRequest.RejectionReason = request.RejectionReason;
+		trackRequest.ApprovedBy = adminId;
+		trackRequest.ApprovedAt = DateTime.UtcNow;
+		
+		await _context.SaveChangesAsync(cancellationToken);
+		
+		_logger.LogInformation("Track request {RequestId} rejected by admin {AdminId}", 
+		                      request.RequestId, adminId);
+		
+		return Result.Success();
+	}
+
+	#endregion
 }

@@ -330,6 +330,197 @@ public class UsersController(IUserService userService) : ControllerBase
 	}
 
 	/// <summary>
+	/// Updates the track/specialization for the current authenticated user.
+	/// </summary>
+	/// <param name="request">The new track name.</param>
+	/// <param name="cancellationToken">The cancellation token for the operation.</param>
+	/// <returns>No content on successful update.</returns>
+	/// <response code="204">Track updated successfully.</response>
+	/// <response code="400">Bad request - invalid track name.</response>
+	/// <response code="401">Unauthorized - user is not authenticated.</response>
+	/// <response code="404">Not found - track not found.</response>
+	[HttpPut("me/track")]
+	[ProducesResponseType(StatusCodes.Status204NoContent)]
+	[ProducesResponseType(StatusCodes.Status400BadRequest)]
+	[ProducesResponseType(StatusCodes.Status401Unauthorized)]
+	[ProducesResponseType(StatusCodes.Status404NotFound)]
+	public async Task<IActionResult> UpdateTrack([FromBody] UpdateTrackRequest request, CancellationToken cancellationToken)
+	{
+		var result = await _userService.UpdateTrackAsync(User.GetUserId()!, request, cancellationToken);
+
+		return result.IsSuccess ? NoContent() : result.ToProblem();
+	}
+
+	/// <summary>
+	/// Updates the track/specialization for the current authenticated user with auto-create option.
+	/// If track doesn't exist, it suggests similar tracks or allows creation with confirmCreate=true.
+	/// </summary>
+	/// <param name="request">The track name and confirmation flag.</param>
+	/// <param name="cancellationToken">The cancellation token for the operation.</param>
+	/// <returns>No content on successful update.</returns>
+	/// <response code="204">Track updated successfully.</response>
+	/// <response code="400">Bad request - invalid track name.</response>
+	/// <response code="401">Unauthorized - user is not authenticated.</response>
+	/// <response code="404">Not found - track not found with suggestions.</response>
+	[HttpPut("me/track/smart")]
+	[ProducesResponseType(StatusCodes.Status204NoContent)]
+	[ProducesResponseType(StatusCodes.Status400BadRequest)]
+	[ProducesResponseType(StatusCodes.Status401Unauthorized)]
+	[ProducesResponseType(StatusCodes.Status404NotFound)]
+	public async Task<IActionResult> UpdateTrackSmart([FromBody] UpdateTrackWithConfirmRequest request, CancellationToken cancellationToken)
+	{
+		var result = await _userService.UpdateTrackWithConfirmAsync(User.GetUserId()!, request, cancellationToken);
+
+		return result.IsSuccess ? NoContent() : result.ToProblem();
+	}
+
+	/// <summary>
+	/// Retrieves all available tracks/specializations.
+	/// </summary>
+	/// <param name="cancellationToken">The cancellation token for the operation.</param>
+	/// <returns>A list of all available tracks.</returns>
+	/// <response code="200">Tracks retrieved successfully.</response>
+	[HttpGet("tracks")]
+	[AllowAnonymous]
+	[ProducesResponseType(StatusCodes.Status200OK)]
+	public async Task<IActionResult> GetTracks(CancellationToken cancellationToken)
+	{
+		var result = await _userService.GetTracksAsync(cancellationToken);
+
+		return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
+	}
+
+	/// <summary>
+	/// Creates a new track request for review by administrators.
+	/// </summary>
+	/// <param name="request">The track name to request.</param>
+	/// <param name="cancellationToken">The cancellation token for the operation.</param>
+	/// <returns>The created track request details.</returns>
+	/// <response code="201">Track request created successfully.</response>
+	/// <response code="400">Bad request - track already exists or invalid data.</response>
+	/// <response code="401">Unauthorized - user is not authenticated.</response>
+	/// <response code="409">Conflict - duplicate request exists.</response>
+	/// <response code="429">Too many requests - rate limit exceeded.</response>
+	[HttpPost("track-requests")]
+	[ProducesResponseType(StatusCodes.Status201Created)]
+	[ProducesResponseType(StatusCodes.Status400BadRequest)]
+	[ProducesResponseType(StatusCodes.Status401Unauthorized)]
+	[ProducesResponseType(StatusCodes.Status409Conflict)]
+	[ProducesResponseType(StatusCodes.Status429TooManyRequests)]
+	public async Task<IActionResult> CreateTrackRequest([FromBody] CreateTrackRequestDto request, CancellationToken cancellationToken)
+	{
+		var result = await _userService.CreateTrackRequestAsync(User.GetUserId()!, request, cancellationToken);
+
+		return result.IsSuccess ? Created(string.Empty, result.Value) : result.ToProblem();
+	}
+
+	/// <summary>
+	/// Retrieves all track requests submitted by the current user.
+	/// </summary>
+	/// <param name="cancellationToken">The cancellation token for the operation.</param>
+	/// <returns>List of user's track requests with their status.</returns>
+	/// <response code="200">Track requests retrieved successfully.</response>
+	/// <response code="401">Unauthorized - user is not authenticated.</response>
+	[HttpGet("me/track-requests")]
+	[ProducesResponseType(StatusCodes.Status200OK)]
+	[ProducesResponseType(StatusCodes.Status401Unauthorized)]
+	public async Task<IActionResult> GetMyTrackRequests(CancellationToken cancellationToken)
+	{
+		var result = await _userService.GetUserTrackRequestsAsync(User.GetUserId()!, cancellationToken);
+
+		return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
+	}
+
+	/// <summary>
+	/// Retrieves track request statistics for the current user including usage limits.
+	/// Shows how many requests used this month and when the next request is available.
+	/// </summary>
+	/// <param name="cancellationToken">The cancellation token for the operation.</param>
+	/// <returns>User's track request statistics and limits.</returns>
+	/// <response code="200">Statistics retrieved successfully.</response>
+	/// <response code="401">Unauthorized - user is not authenticated.</response>
+	[HttpGet("me/track-requests/stats")]
+	[ProducesResponseType(StatusCodes.Status200OK)]
+	[ProducesResponseType(StatusCodes.Status401Unauthorized)]
+	public async Task<IActionResult> GetMyTrackRequestStats(CancellationToken cancellationToken)
+	{
+		var result = await _userService.GetUserTrackRequestStatsAsync(User.GetUserId()!, cancellationToken);
+
+		return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
+	}
+
+	/// <summary>
+	/// Retrieves all track requests (Admin only).
+	/// </summary>
+	/// <param name="status">Optional filter by request status.</param>
+	/// <param name="cancellationToken">The cancellation token for the operation.</param>
+	/// <returns>List of all track requests.</returns>
+	/// <response code="200">Track requests retrieved successfully.</response>
+	/// <response code="401">Unauthorized - user is not authenticated.</response>
+	/// <response code="403">Forbidden - user is not an admin.</response>
+	[HttpGet("track-requests")]
+	[Authorize(Roles = "Admin")]
+	[ProducesResponseType(StatusCodes.Status200OK)]
+	[ProducesResponseType(StatusCodes.Status401Unauthorized)]
+	[ProducesResponseType(StatusCodes.Status403Forbidden)]
+	public async Task<IActionResult> GetAllTrackRequests([FromQuery] TrackRequestStatus? status, CancellationToken cancellationToken)
+	{
+		var result = await _userService.GetAllTrackRequestsAsync(status, cancellationToken);
+
+		return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
+	}
+
+	/// <summary>
+	/// Approves a track request (Admin only).
+	/// </summary>
+	/// <param name="request">The approval details including whether to create new or merge.</param>
+	/// <param name="cancellationToken">The cancellation token for the operation.</param>
+	/// <returns>No content on success.</returns>
+	/// <response code="204">Track request approved successfully.</response>
+	/// <response code="400">Bad request - request already processed or invalid data.</response>
+	/// <response code="401">Unauthorized - user is not authenticated.</response>
+	/// <response code="403">Forbidden - user is not an admin.</response>
+	/// <response code="404">Not found - track request not found.</response>
+	[HttpPost("track-requests/approve")]
+	[Authorize(Roles = "Admin")]
+	[ProducesResponseType(StatusCodes.Status204NoContent)]
+	[ProducesResponseType(StatusCodes.Status400BadRequest)]
+	[ProducesResponseType(StatusCodes.Status401Unauthorized)]
+	[ProducesResponseType(StatusCodes.Status403Forbidden)]
+	[ProducesResponseType(StatusCodes.Status404NotFound)]
+	public async Task<IActionResult> ApproveTrackRequest([FromBody] ApproveTrackRequestDto request, CancellationToken cancellationToken)
+	{
+		var result = await _userService.ApproveTrackRequestAsync(User.GetUserId()!, request, cancellationToken);
+
+		return result.IsSuccess ? NoContent() : result.ToProblem();
+	}
+
+	/// <summary>
+	/// Rejects a track request (Admin only).
+	/// </summary>
+	/// <param name="request">The rejection details including reason.</param>
+	/// <param name="cancellationToken">The cancellation token for the operation.</param>
+	/// <returns>No content on success.</returns>
+	/// <response code="204">Track request rejected successfully.</response>
+	/// <response code="400">Bad request - request already processed.</response>
+	/// <response code="401">Unauthorized - user is not authenticated.</response>
+	/// <response code="403">Forbidden - user is not an admin.</response>
+	/// <response code="404">Not found - track request not found.</response>
+	[HttpPost("track-requests/reject")]
+	[Authorize(Roles = "Admin")]
+	[ProducesResponseType(StatusCodes.Status204NoContent)]
+	[ProducesResponseType(StatusCodes.Status400BadRequest)]
+	[ProducesResponseType(StatusCodes.Status401Unauthorized)]
+	[ProducesResponseType(StatusCodes.Status403Forbidden)]
+	[ProducesResponseType(StatusCodes.Status404NotFound)]
+	public async Task<IActionResult> RejectTrackRequest([FromBody] RejectTrackRequestDto request, CancellationToken cancellationToken)
+	{
+		var result = await _userService.RejectTrackRequestAsync(User.GetUserId()!, request, cancellationToken);
+
+		return result.IsSuccess ? NoContent() : result.ToProblem();
+	}
+
+	/// <summary>
 	/// Updates the email address for the current authenticated user.
 	/// Sends a confirmation email to the new address.
 	/// </summary>
