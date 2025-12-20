@@ -15,7 +15,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<UserCertificate> UserCertificates { get; set; }
     public DbSet<Skill> Skills { get; set; }    
     public DbSet<UserSkill> UserSkills{ get; set; }    
-    public DbSet<Track> Tracks{ get; set; }    
+    public DbSet<Track> Tracks{ get; set; }
+    public DbSet<TrackRequest> TrackRequests { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

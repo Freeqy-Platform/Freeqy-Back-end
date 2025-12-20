@@ -4,16 +4,18 @@ public class UpdateUserProfileRequestValidator : AbstractValidator<UpdateUserPro
 {
 	public UpdateUserProfileRequestValidator()
 	{
-		RuleFor(x => x.FirstName)
-			.NotEmpty()
-			.WithMessage("First name is required")
-			.Length(3, 100)
-			.WithMessage("First name must be between 3 and 100 characters");
+		When(x => !string.IsNullOrWhiteSpace(x.FirstName), () =>
+		{
+			RuleFor(x => x.FirstName)
+				.Length(3, 100)
+				.WithMessage("First name must be between 3 and 100 characters");
+		});
 
-		RuleFor(x => x.LastName)
-			.NotEmpty()
-			.WithMessage("Last name is required")
-			.Length(3, 100)
-			.WithMessage("Last name must be between 3 and 100 characters");
+		When(x => !string.IsNullOrWhiteSpace(x.LastName), () =>
+		{
+			RuleFor(x => x.LastName)
+				.Length(3, 100)
+				.WithMessage("Last name must be between 3 and 100 characters");
+		});
 	}
 }

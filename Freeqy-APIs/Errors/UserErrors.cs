@@ -61,4 +61,23 @@ public class UserErrors
     
     public static readonly Error NoAuthenticate =
         new("User.NoAuthenticate", "Not authenticated request", StatusCodes.Status403Forbidden);
+    
+    // Track Request Errors
+    public static readonly Error TrackRequestNotFound =
+        new("TrackRequest.NotFound", "Track request not found", StatusCodes.Status404NotFound);
+    
+    public static readonly Error TrackRequestAlreadyProcessed =
+        new("TrackRequest.AlreadyProcessed", "This track request has already been processed", StatusCodes.Status400BadRequest);
+    
+    public static readonly Error TrackRequestRateLimitExceeded =
+        new("TrackRequest.RateLimitExceeded", "You can only submit one track request per 24 hours", StatusCodes.Status429TooManyRequests);
+    
+    public static readonly Error TrackRequestDailyLimitExceeded =
+        new("TrackRequest.DailyLimitExceeded", "You can only submit one track request per day. Please try again tomorrow.", StatusCodes.Status429TooManyRequests);
+    
+    public static readonly Error TrackRequestMonthlyLimitExceeded =
+        new("TrackRequest.MonthlyLimitExceeded", "You have reached the maximum limit of 3 track requests per month. Please try again next month.", StatusCodes.Status429TooManyRequests);
+    
+    public static readonly Error DuplicateTrackRequest =
+        new("TrackRequest.Duplicate", "A pending request for this track already exists", StatusCodes.Status409Conflict);
 }
