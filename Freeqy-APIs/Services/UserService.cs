@@ -289,6 +289,154 @@ public class UserService(
 		return Result.Success();
 	}
 
+	public async Task<Result<string>> GetUserBannerPhotoUrlAsync(string userId)
+	{
+		var user = await _userManager.FindByIdAsync(userId);
+
+		if (user is null)
+			return Result.Failure<string>(UserErrors.UserNotFound);
+
+		if (string.IsNullOrEmpty(user.BannerPhotoUrl))
+			return Result.Failure<string>(UserErrors.BannerPhotoNotFound);
+
+		var request = _httpContextAccessor.HttpContext?.Request;
+		if (request is not null)
+		{
+			var baseUrl = $"{request.Scheme}://{request.Host}";
+			var fullBannerPhotoUrl = $"{baseUrl}{user.BannerPhotoUrl}";
+			return Result.Success(fullBannerPhotoUrl);
+		}
+
+		return Result.Success(user.BannerPhotoUrl);
+	}
+
+	public async Task<Result<UploadPhotoResponse>> UploadUserBannerPhotoAsync(string userId, IFormFile bannerPhoto)
+	{
+		// 1. Validate banner photo file
+		if (bannerPhoto is null || bannerPhoto.Length == 0)
+			return Result.Failure<UploadPhotoResponse>(UserErrors.NoBannerPhotoProvided);
+
+		// 2. Check file size
+		if (bannerPhoto.Length > MaxFileSize)
+			return Result.Failure<UploadPhotoResponse>(UserErrors.PhotoFileTooLarge);
+
+		// 3. Check file extension
+		var extension = Path.GetExtension(bannerPhoto.FileName).ToLowerInvariant();
+		if (!AllowedExtensions.Contains(extension))
+			return Result.Failure<UploadPhotoResponse>(UserErrors.InvalidPhotoFile);
+
+		// 4. Get user
+		var user = await _userManager.FindByIdAsync(userId);
+		if (user is null)
+			return Result.Failure<UploadPhotoResponse>(UserErrors.UserNotFound);
+
+		// 5. Delete old banner photo if exists
+		if (!string.IsNullOrEmpty(user.BannerPhotoUrl))
+		{
+			var oldBannerPhotoPath = Path.Combine(_environment.WebRootPath, user.BannerPhotoUrl.TrimStart('/'));
+			if (File.Exists(oldBannerPhotoPath))
+			{
+				File.Delete(oldBannerPhotoPath);
+			}
+		}
+
+		// 6. Generate unique filename using GUID
+		var fileName = $"{Guid.CreateVersion7()}{extension}";
+		var uploadsFolder = Path.Combine(_environment.WebRootPath, "uploads", "banner-photos");
+		var filePath = Path.Combine(uploadsFolder, fileName);
+
+		// 7. Ensure directory exists
+		Directory.CreateDirectory(uploadsFolder);
+
+		// 8. Save file to disk
+		await using (var fileStream = new FileStream(filePath, FileMode.Create))
+		{
+			await bannerPhoto.CopyToAsync(fileStream);
+		}
+
+		// 9. Update user's BannerPhotoUrl
+		var bannerPhotoUrl = $"/uploads/banner-photos/{fileName}";
+		user.BannerPhotoUrl = bannerPhotoUrl;
+
+		var updateResult = await _userManager.UpdateAsync(user);
+
+		if (!updateResult.Succeeded)
+		{
+			// Rollback: delete the uploaded file
+			if (File.Exists(filePath))
+			{
+				File.Delete(filePath);
+			}
+
+			var error = updateResult.Errors.FirstOrDefault();
+			if (error is null)
+			{
+				return Result.Failure<UploadPhotoResponse>(
+					new Error("User.UpdateFailed", "Failed to update user profile", StatusCodes.Status500InternalServerError));
+			}
+
+			return Result.Failure<UploadPhotoResponse>(
+				new Error(error.Code, error.Description, StatusCodes.Status400BadRequest));
+		}
+
+		// 10. Build full banner photo URL
+		var fullBannerPhotoUrl = bannerPhotoUrl;
+		var request = _httpContextAccessor.HttpContext?.Request;
+		if (request is not null)
+		{
+			var baseUrl = $"{request.Scheme}://{request.Host}";
+			fullBannerPhotoUrl = $"{baseUrl}{bannerPhotoUrl}";
+		}
+
+		// 11. Return success response
+		var response = new UploadPhotoResponse(fullBannerPhotoUrl, "Banner photo uploaded successfully");
+		return Result.Success(response);
+	}
+
+	public async Task<Result> DeleteUserBannerPhotoAsync(string userId)
+	{
+		var user = await _userManager.FindByIdAsync(userId);
+
+		if (user is null)
+			return Result.Failure(UserErrors.UserNotFound);
+
+		if (string.IsNullOrEmpty(user.BannerPhotoUrl))
+			return Result.Failure(UserErrors.BannerPhotoNotFound);
+
+		var bannerPhotoPath = Path.Combine(_environment.WebRootPath, user.BannerPhotoUrl.TrimStart('/'));
+		
+		if (File.Exists(bannerPhotoPath))
+		{
+			try
+			{
+				File.Delete(bannerPhotoPath);
+			}
+			catch (Exception)
+			{
+				// Continue even if file deletion fails
+			}
+		}
+
+		user.BannerPhotoUrl = null;
+
+		var result = await _userManager.UpdateAsync(user);
+
+		if (!result.Succeeded)
+		{
+			var error = result.Errors.FirstOrDefault();
+			if (error is null)
+			{
+				return Result.Failure(
+					new Error("User.UpdateFailed", "Failed to delete banner photo", StatusCodes.Status500InternalServerError));
+			}
+
+			return Result.Failure(
+				new Error(error.Code, error.Description, StatusCodes.Status400BadRequest));
+		}
+
+		return Result.Success();
+	}
+
 	public async Task<Result<UserProfileResponse>> UpdateSkillsAsync(string userId, UpdateUserSkillsRequest skillsRequest, CancellationToken cancellationToken = default)
 	{
 		var user = await _userManager.Users

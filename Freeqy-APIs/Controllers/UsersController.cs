@@ -132,6 +132,66 @@ public class UsersController(IUserService userService) : ControllerBase
 	}
 
 	/// <summary>
+	/// Retrieves the current authenticated user's banner photo URL.
+	/// </summary>
+	/// <returns>The URL of the user's banner photo.</returns>
+	/// <response code="200">Banner photo URL retrieved successfully.</response>
+	/// <response code="401">Unauthorized - user is not authenticated.</response>
+	/// <response code="404">Not found - banner photo not found.</response>
+	[HttpGet("me/banner-photo")]
+	[ProducesResponseType(StatusCodes.Status200OK)]
+	[ProducesResponseType(StatusCodes.Status401Unauthorized)]
+	[ProducesResponseType(StatusCodes.Status404NotFound)]
+	public async Task<IActionResult> GetMyBannerPhoto()
+	{
+		var result = await _userService.GetUserBannerPhotoUrlAsync(User.GetUserId()!);
+
+		if (result.IsFailure)
+			return result.ToProblem();
+
+		return Ok(new { bannerPhotoUrl = result.Value });
+	}
+
+	/// <summary>
+	/// Uploads a banner photo for the current authenticated user.
+	/// </summary>
+	/// <param name="request">The banner photo file to upload (maximum size: 5MB).</param>
+	/// <returns>The URL of the uploaded banner photo.</returns>
+	/// <response code="201">Banner photo uploaded successfully.</response>
+	/// <response code="400">Bad request - invalid file or file size exceeds limit.</response>
+	/// <response code="401">Unauthorized - user is not authenticated.</response>
+	[HttpPost("me/banner-photo")]
+	[RequestSizeLimit(5 * 1024 * 1024)] // 5MB limit
+	[Consumes("multipart/form-data")]
+	[ProducesResponseType(StatusCodes.Status201Created)]
+	[ProducesResponseType(StatusCodes.Status400BadRequest)]
+	[ProducesResponseType(StatusCodes.Status401Unauthorized)]
+	public async Task<IActionResult> UploadMyBannerPhoto([FromForm] UploadBannerPhotoRequest request)
+	{
+		var result = await _userService.UploadUserBannerPhotoAsync(User.GetUserId()!, request.BannerPhoto);
+
+		return result.IsSuccess ? Created(string.Empty, result.Value) : result.ToProblem();
+	}
+
+	/// <summary>
+	/// Deletes the current authenticated user's banner photo.
+	/// </summary>
+	/// <returns>No content on successful deletion.</returns>
+	/// <response code="204">Banner photo deleted successfully.</response>
+	/// <response code="401">Unauthorized - user is not authenticated.</response>
+	/// <response code="404">Not found - banner photo not found.</response>
+	[HttpDelete("me/banner-photo")]
+	[ProducesResponseType(StatusCodes.Status204NoContent)]
+	[ProducesResponseType(StatusCodes.Status401Unauthorized)]
+	[ProducesResponseType(StatusCodes.Status404NotFound)]
+	public async Task<IActionResult> DeleteMyBannerPhoto()
+	{
+		var result = await _userService.DeleteUserBannerPhotoAsync(User.GetUserId()!);
+
+		return result.IsSuccess ? NoContent() : result.ToProblem();
+	}
+
+	/// <summary>
 	/// Retrieves all users with optional filtering.
 	/// </summary>
 	/// <param name="userProfileRequestFilter">The filter criteria for users (search, skills, availability, etc.).</param>

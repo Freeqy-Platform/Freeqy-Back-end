@@ -29,6 +29,9 @@ public class UserErrors
     public static readonly Error PhotoNotFound =
         new("User.PhotoNotFound", "User photo not found", StatusCodes.Status404NotFound);
 
+    public static readonly Error BannerPhotoNotFound =
+        new("User.BannerPhotoNotFound", "User banner photo not found", StatusCodes.Status404NotFound);
+
     public static readonly Error InvalidPhotoFile =
         new("User.InvalidPhotoFile", "Invalid photo file. Please upload a valid image (JPEG, PNG, or WebP).", StatusCodes.Status400BadRequest);
 
@@ -37,6 +40,9 @@ public class UserErrors
 
     public static readonly Error NoPhotoProvided =
         new("User.NoPhotoProvided", "No photo file was provided.", StatusCodes.Status400BadRequest);
+
+    public static readonly Error NoBannerPhotoProvided =
+        new("User.NoBannerPhotoProvided", "No banner photo file was provided.", StatusCodes.Status400BadRequest);
 
     public static readonly Error DuplicateUsername =
         new("User.DuplicateUsername", "This username is already taken", StatusCodes.Status409Conflict);
