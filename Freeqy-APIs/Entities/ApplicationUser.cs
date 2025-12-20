@@ -12,6 +12,7 @@ public sealed class ApplicationUser : IdentityUser
     public string LastName { get; set; } = string.Empty;
 	public int? TrackId { get; set; }
 	public string? PhotoUrl { get; set; }
+	public string? BannerPhotoUrl { get; set; }
 	public string? Summary { get; set; }
 	public UserAvailability Availability { get; set; } = UserAvailability.Available;
 
