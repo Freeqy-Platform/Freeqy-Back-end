@@ -30,3 +30,4 @@ global using Freeqy_APIs.Extensions;
 global using Freeqy_APIs.Contracts.Users;
 global using Freeqy_APIs.Contracts.Skills;
 global using Freeqy_APIs.Contracts.Tracks;
+global using Freeqy_APIs.Contracts.AiAnalysis;
