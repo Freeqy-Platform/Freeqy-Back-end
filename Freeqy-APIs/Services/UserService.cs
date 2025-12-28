@@ -26,10 +26,15 @@ public class UserService(
 	{
 		var user = await _userManager.Users
 			.Where(u => u.Id == userId)
-			.ProjectToType<UserProfileResponse>()
+			.Include(u => u.Certificates)
+			.Include(u => u.Educations)
+			.Include(u => u.SocialMediaLinks)
+			.Include(u => u.Skills)
+			.ThenInclude(us => us.Skill)
+			.Include(u => u.Track)
 			.SingleAsync();
 
-		return Result.Success(user);
+		return Result.Success(BuildUserProfileResponse(user));
 	}
 
 	public async Task<Result<UserProfileResponse>> UpdateProfileAsync(string userId, UpdateUserProfileRequest request)
@@ -55,6 +60,55 @@ public class UserService(
 			hasChanges = true;
 		}
 
+		if (!string.IsNullOrWhiteSpace(request.PhoneNumber) && user.PhoneNumber != request.PhoneNumber)
+		{
+			var newPhoneNumber = request.PhoneNumber.Trim();
+			var existingUser = await _userManager.Users
+				.FirstOrDefaultAsync(u => u.PhoneNumber == newPhoneNumber && u.Id != userId);
+
+			if (existingUser is not null)
+				return Result.Failure<UserProfileResponse>(UserErrors.DuplicatePhoneNumber);
+
+			user.PhoneNumber = newPhoneNumber;
+			user.PhoneNumberConfirmed = false;
+			hasChanges = true;
+		}
+
+		if (request.Summary is not null && user.Summary != request.Summary)
+		{
+			user.Summary = string.IsNullOrWhiteSpace(request.Summary) ? null : request.Summary.Trim();
+			hasChanges = true;
+		}
+
+		if (!string.IsNullOrWhiteSpace(request.Availability))
+		{
+			if (Enum.TryParse<UserAvailability>(request.Availability, true, out var availability) && user.Availability != availability)
+			{
+				user.Availability = availability;
+				hasChanges = true;
+			}
+		}
+
+		if (!string.IsNullOrWhiteSpace(request.TrackName))
+		{
+			var trackName = request.TrackName.Trim();
+			var track = await _context.Tracks
+				.FirstOrDefaultAsync(t => t.Name.ToLower() == trackName.ToLower());
+
+			if (track is not null && user.TrackId != track.Id)
+			{
+				user.TrackId = track.Id;
+				hasChanges = true;
+			}
+			else if (track is null)
+			{
+				return Result.Failure<UserProfileResponse>(
+					new Error("Track.NotFound", 
+					         $"Track '{trackName}' does not exist. Use the dedicated track endpoints to request a new track.", 
+					         StatusCodes.Status404NotFound));
+			}
+		}
+
 		if (!hasChanges)
 		{
 			var updatedUser = await _userManager.Users
@@ -65,10 +119,9 @@ public class UserService(
 				.Include(u => u.Skills)
 				.ThenInclude(us => us.Skill)
 				.Include(u => u.Track)
-				.ProjectToType<UserProfileResponse>()
 				.SingleAsync();
 
-			return Result.Success(updatedUser);
+			return Result.Success(BuildUserProfileResponse(updatedUser));
 		}
 
 		var result = await _userManager.UpdateAsync(user);
@@ -95,23 +148,90 @@ public class UserService(
 			.Include(u => u.Skills)
 			.ThenInclude(us => us.Skill)
 			.Include(u => u.Track)
-			.ProjectToType<UserProfileResponse>()
 			.SingleAsync();
 
-		return Result.Success(response);
+		return Result.Success(BuildUserProfileResponse(response));
+	}
+
+	private UserProfileResponse BuildUserProfileResponse(ApplicationUser user)
+	{
+		var httpContext = _httpContextAccessor.HttpContext;
+		string? photoUrl = null;
+		string? bannerPhotoUrl = null;
+
+		if (httpContext?.Request is not null)
+		{
+			var baseUrl = $"{httpContext.Request.Scheme}://{httpContext.Request.Host}";
+			
+			if (!string.IsNullOrEmpty(user.PhotoUrl))
+			{
+				photoUrl = $"{baseUrl}{user.PhotoUrl}";
+			}
+			
+			if (!string.IsNullOrEmpty(user.BannerPhotoUrl))
+			{
+				bannerPhotoUrl = $"{baseUrl}{user.BannerPhotoUrl}";
+			}
+		}
+		else
+		{
+			photoUrl = user.PhotoUrl;
+			bannerPhotoUrl = user.BannerPhotoUrl;
+		}
+
+		return new UserProfileResponse(
+			user.Id,
+			user.Email ?? string.Empty,
+			user.UserName ?? string.Empty,
+			user.FirstName,
+			user.LastName,
+			photoUrl,
+			bannerPhotoUrl,
+			user.PhoneNumber,
+			user.Summary,
+			user.Availability.ToString(),
+			user.Track?.Name,
+			user.Skills.Select(us => us.Skill).Adapt<IEnumerable<SkillResponse>>(),
+			user.SocialMediaLinks.Select(sm => new SocialMediaLinkDto(sm.Platform, sm.Link)),
+			user.Educations.Select(e => new EducationDto(
+				e.Id,
+				e.InstitutionName,
+				e.Degree,
+				e.FieldOfStudy,
+				e.StartDate,
+				e.EndDate,
+				e.Grade,
+				e.Description
+			)),
+			user.Certificates.Select(c => new CertificateDto(
+				c.Id,
+				c.CertificateName,
+				c.Issuer,
+				c.IssueDate,
+				c.ExpirationDate,
+				c.CredentialId,
+				c.CredentialUrl,
+				c.Description
+			))
+		);
 	}
 
 	public async Task<Result<UserProfileResponse>> GetUserByIdAsync(string userId, CancellationToken cancellationToken = default)
 	{
 		var user = await _userManager.Users
 			.Where(u => u.Id == userId)
-			.ProjectToType<UserProfileResponse>()
+			.Include(u => u.Certificates)
+			.Include(u => u.Educations)
+			.Include(u => u.SocialMediaLinks)
+			.Include(u => u.Skills)
+			.ThenInclude(us => us.Skill)
+			.Include(u => u.Track)
 			.SingleOrDefaultAsync(cancellationToken);
 
 		if (user is null)
 			return Result.Failure<UserProfileResponse>(UserErrors.UserNotFound);
 
-		return Result.Success(user);
+		return Result.Success(BuildUserProfileResponse(user));
 	}
 
 	public async Task<Result<IEnumerable<UserProfileResponse>>> GetAllAsync(UserProfileRequestFilter profileRequestFilter, CancellationToken cancellationToken = default)
@@ -135,10 +255,14 @@ public class UserService(
 			.Include(u => u.Track)
 			.Include(u => u.Skills)
 			.ThenInclude(us => us.Skill)
-			.ProjectToType<UserProfileResponse>()
+			.Include(u => u.Certificates)
+			.Include(u => u.Educations)
+			.Include(u => u.SocialMediaLinks)
 			.ToListAsync(cancellationToken);
 
-		return Result.Success<IEnumerable<UserProfileResponse>>(users);
+		var userResponses = users.Select(BuildUserProfileResponse);
+
+		return Result.Success<IEnumerable<UserProfileResponse>>(userResponses);
 	}
 
 	public async Task<Result<string>> GetUserPhotoUrlAsync(string userId)
@@ -442,6 +566,10 @@ public class UserService(
 		var user = await _userManager.Users
 			.Include(u => u.Skills)
 			.ThenInclude(us => us.Skill)
+			.Include(u => u.Certificates)
+			.Include(u => u.Educations)
+			.Include(u => u.SocialMediaLinks)
+			.Include(u => u.Track)
 			.SingleOrDefaultAsync(u => u.Id == userId, cancellationToken);
 
 		if (user is null)
@@ -516,8 +644,17 @@ public class UserService(
 			.Where(us => us.UserId == userId && removedSkillNames.Contains(us.Skill!.Name))
 			.ExecuteDeleteAsync(cancellationToken);
 
-		var response = user.Adapt<UserProfileResponse>();
-		return Result.Success(response);
+		var updatedUser = await _userManager.Users
+			.Where(u => u.Id == userId)
+			.Include(u => u.Certificates)
+			.Include(u => u.Educations)
+			.Include(u => u.SocialMediaLinks)
+			.Include(u => u.Skills)
+			.ThenInclude(us => us.Skill)
+			.Include(u => u.Track)
+			.SingleAsync(cancellationToken);
+
+		return Result.Success(BuildUserProfileResponse(updatedUser));
 	}
 
 	public async Task<Result<UserProfileResponse>> UpdateSocialLinksAsync(string userId, UpdateSocialLinksRequest request, CancellationToken cancellationToken = default)
@@ -552,13 +689,14 @@ public class UserService(
 
 		var updatedUser = await _userManager.Users
 			.Include(u => u.SocialMediaLinks)
+			.Include(u => u.Certificates)
+			.Include(u => u.Educations)
 			.Include(u => u.Skills)
 			.ThenInclude(us => us.Skill)
 			.Include(u => u.Track)
 			.SingleAsync(u => u.Id == userId, cancellationToken);
 
-		var response = updatedUser.Adapt<UserProfileResponse>();
-		return Result.Success(response);
+		return Result.Success(BuildUserProfileResponse(updatedUser));
 	}
 
 	public async Task<Result<UserProfileResponse>> UpdateEducationsAsync(string userId, UpdateEducationsRequest request, CancellationToken cancellationToken = default)
@@ -597,14 +735,14 @@ public class UserService(
 
 		var updatedUser = await _userManager.Users
 			.Include(u => u.Educations)
+			.Include(u => u.Certificates)
 			.Include(u => u.SocialMediaLinks)
 			.Include(u => u.Skills)
 			.ThenInclude(us => us.Skill)
 			.Include(u => u.Track)
 			.SingleAsync(u => u.Id == userId, cancellationToken);
 
-		var response = updatedUser.Adapt<UserProfileResponse>();
-		return Result.Success(response);
+		return Result.Success(BuildUserProfileResponse(updatedUser));
 	}
 
 	public async Task<Result<UserProfileResponse>> UpdateCertificatesAsync(string userId, UpdateCertificatesRequest request, CancellationToken cancellationToken = default)

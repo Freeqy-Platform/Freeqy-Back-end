@@ -7,6 +7,7 @@ public record UserProfileResponse(
 	string FirstName,
 	string LastName,
 	string? PhotoUrl,
+	string? BannerPhotoUrl,
 	string? PhoneNumber,
 	string? Summary,
 	string Availability,

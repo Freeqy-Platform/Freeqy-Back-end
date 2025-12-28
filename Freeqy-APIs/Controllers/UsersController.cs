@@ -34,16 +34,20 @@ public class UsersController(IUserService userService) : ControllerBase
 
 	/// <summary>
 	/// Updates the current authenticated user's profile information.
+	/// Supports updating multiple fields in a single request: FirstName, LastName, PhoneNumber, Summary, Availability, and TrackName.
+	/// All fields are optional - only provided fields will be updated.
 	/// </summary>
-	/// <param name="request">The updated profile information.</param>
+	/// <param name="request">The updated profile information containing any combination of profile fields.</param>
 	/// <returns>No content on successful update.</returns>
 	/// <response code="204">User profile updated successfully.</response>
-	/// <response code="400">Bad request - invalid profile data.</response>
+	/// <response code="400">Bad request - invalid profile data or duplicate phone number.</response>
 	/// <response code="401">Unauthorized - user is not authenticated.</response>
+	/// <response code="404">Not found - specified track does not exist.</response>
 	[HttpPut("me")]
 	[ProducesResponseType(StatusCodes.Status204NoContent)]
 	[ProducesResponseType(StatusCodes.Status400BadRequest)]
 	[ProducesResponseType(StatusCodes.Status401Unauthorized)]
+	[ProducesResponseType(StatusCodes.Status404NotFound)]
 	public async Task<IActionResult> UpdateProfile([FromBody] UpdateUserProfileRequest request)
 	{
 		var result = await _userService.UpdateProfileAsync(User.GetUserId()!, request);
