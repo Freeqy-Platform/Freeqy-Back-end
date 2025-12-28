@@ -1,6 +1,6 @@
 using Freeqy_APIs.Contracts.AiAnalysis;
 
-namespace Freeqy_APIs.Abstractions;
+namespace Freeqy_APIs.Services;
 
 public interface IAiAnalysisService
 {
