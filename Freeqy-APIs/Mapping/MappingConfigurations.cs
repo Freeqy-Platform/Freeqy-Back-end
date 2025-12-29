@@ -1,4 +1,5 @@
 ﻿using Freeqy_APIs.Contracts.Projects;
+using Freeqy_APIs.Contracts.AiAnalysis;
 
 namespace Freeqy_APIs.Mapping;
 
@@ -17,7 +18,7 @@ public class MappingConfigurations : IRegister
               .Map(dest => dest.Technologies, src => src.Technologies.Select(t => t.Adapt<TechnologyDto>()).ToList())
               .Map(dest => dest.MembersCount, src => src.ProjectMembers.Count);
          
-         
+        
          
 
         config.NewConfig<ApplicationUser, UserProfileResponse>()
@@ -54,5 +55,32 @@ public class MappingConfigurations : IRegister
             .Map(dest => dest.ExpiresAt, src => src.invitation.ExpiresAt)
             .Map(dest => dest.SentBy,
                  src => src.senderUser.FirstName + " " + src.senderUser.LastName);
+
+        // AI Analysis Mapping Configurations
+        config.NewConfig<TeamStructureResponse, TeamStructureResponse>()
+            .Map(dest => dest.Roles, src => src.Roles)
+            .Map(dest => dest.RequiredSkills, src => src.RequiredSkills);
+
+        config.NewConfig<RoleRecommendation, RoleRecommendation>()
+            .Map(dest => dest.Role, src => src.Role)
+            .Map(dest => dest.Track, src => src.Track)
+            .Map(dest => dest.RecommendedMembers, src => src.RecommendedMembers)
+            .Map(dest => dest.Skills, src => src.Skills)
+            .Map(dest => dest.Priority, src => src.Priority);
+
+        config.NewConfig<TechStackResponse, TechStackResponse>()
+            .Map(dest => dest.Backend, src => src.Backend)
+            .Map(dest => dest.Frontend, src => src.Frontend)
+            .Map(dest => dest.Database, src => src.Database)
+            .Map(dest => dest.AiStack, src => src.AiStack)
+            .Map(dest => dest.DevOps, src => src.DevOps);
+
+        config.NewConfig<FullAnalysisResponse, FullAnalysisResponse>()
+            .Map(dest => dest.Success, src => src.Success)
+            .Map(dest => dest.TeamStructure, src => src.TeamStructure)
+            .Map(dest => dest.TechStack, src => src.TechStack)
+            .Map(dest => dest.TotalRoles, src => src.TotalRoles)
+            .Map(dest => dest.TotalMembers, src => src.TotalMembers)
+            .Map(dest => dest.ProcessingTime, src => src.ProcessingTime);
 	}
 }
