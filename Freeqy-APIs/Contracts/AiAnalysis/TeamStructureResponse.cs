@@ -1,14 +1,15 @@
+using System.Text.Json.Serialization;
+
 namespace Freeqy_APIs.Contracts.AiAnalysis;
 
 public sealed record TeamStructureResponse(
-	List<RoleRecommendation> Roles,
-	List<string> RequiredSkills
+	List<RoleRecommendation> Roles
 );
 
 public sealed record RoleRecommendation(
-	string Role,
-	string Track,
-	int RecommendedMembers,
-	List<string> Skills,
-	string Priority
+	[property: JsonPropertyName("role")] string Role,
+	[property: JsonPropertyName("track")] string Track,
+	[property: JsonPropertyName("recommended_members")] int RecommendedMembers,
+	[property: JsonPropertyName("skills")] List<string> Skills,
+	[property: JsonPropertyName("priority")] string Priority
 );
