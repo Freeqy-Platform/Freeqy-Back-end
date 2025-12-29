@@ -1,3 +1,4 @@
+using Freeqy_APIs.Abstractions;
 using Freeqy_APIs.Contracts.Category;
 using Freeqy_APIs.Contracts.Projects;
 using Freeqy_APIs.Contracts.Technology;
@@ -6,7 +7,7 @@ namespace Freeqy_APIs.Services;
 
 public interface IProjectService
 {
-    Task<Result<ProjectListResponse>> GetProjectsAsync(ProjectRequestFilter filter, CancellationToken cancellationToken = default);
+    Task<Result<PaginatedList<ProjectListItemResponse>>> GetProjectsAsync(ProjectRequestFilter filter, CancellationToken cancellationToken = default);
 
     Task<Result<TechnologyResponse>> AddTechnologyAsync(TechnologyRequest request,
         CancellationToken cancellationToken = default);
