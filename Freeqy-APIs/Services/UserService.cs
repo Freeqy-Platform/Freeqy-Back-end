@@ -955,13 +955,7 @@ public class UserService(
 		if (user is null)
 			return Result.Failure<UserProfileResponse>(UserErrors.UserNotFound);
 
-		if (!Enum.TryParse<UserAvailability>(request.Availability, true, out var availability))
-		{
-			return Result.Failure<UserProfileResponse>(
-				new Error("User.InvalidAvailability", "Invalid availability status", StatusCodes.Status400BadRequest));
-		}
-
-		user.Availability = availability;
+		user.Availability = request.Availability;
 
 		var result = await _userManager.UpdateAsync(user);
 

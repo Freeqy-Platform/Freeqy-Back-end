@@ -5,12 +5,6 @@ public class UpdateAvailabilityRequestValidator : AbstractValidator<UpdateAvaila
 	public UpdateAvailabilityRequestValidator()
 	{
 		RuleFor(x => x.Availability)
-			.NotEmpty().WithMessage("Availability status is required")
-			.Must(BeValidAvailability).WithMessage("Availability must be one of: Available, Busy, DoNotDisturb");
-	}
-
-	private bool BeValidAvailability(string availability)
-	{
-		return availability is "Available" or "Busy" or "DoNotDisturb";
+			.IsInEnum().WithMessage("Availability must be 1 (Available), 2 (Busy), or 3 (DoNotDisturb)");
 	}
 }
