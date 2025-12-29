@@ -1,10 +1,10 @@
 namespace Freeqy_APIs.Contracts.AiAnalysis;
 
-public class AiAnalysisRequestValidator : AbstractValidator<AiAnalysisRequest>
+public class ProjectIdeaValidator : AbstractValidator<ProjectIdea>
 {
-	public AiAnalysisRequestValidator()
+	public ProjectIdeaValidator()
 	{
-		RuleFor(x => x.ProjectIdea)
+		RuleFor(x => x.Idea)
 			.NotEmpty()
 			.WithMessage("Project idea is required")
 			.MinimumLength(10)

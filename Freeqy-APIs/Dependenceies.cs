@@ -1,6 +1,7 @@
 using Freeqy_APIs.Configrautions;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using System.Threading.RateLimiting;
+using Refit;
 
 namespace Freeqy_APIs;
 
@@ -92,6 +93,21 @@ public static class Dependenceies
 
         // Add Rate Limiting
         services.AddRateLimitingConfig(configuration);
+
+        // Add Refit service to make sure AI service is Working 
+        services.AddAIServices();
+
+        return services;
+    }
+
+    private static IServiceCollection AddAIServices(this IServiceCollection services)
+    {
+
+        services.AddRefitClient<IAiServices>()
+            .ConfigureHttpClient(c =>
+            {
+                c.BaseAddress = new Uri("http://127.0.0.1:8000/api/v1");
+            });
 
         return services;
     }

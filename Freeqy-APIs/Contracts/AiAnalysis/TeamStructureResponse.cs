@@ -2,7 +2,6 @@ namespace Freeqy_APIs.Contracts.AiAnalysis;
 
 public sealed record TeamStructureResponse(
 	List<RoleRecommendation> Roles,
-	int TotalMembers,
 	List<string> RequiredSkills
 );
 
