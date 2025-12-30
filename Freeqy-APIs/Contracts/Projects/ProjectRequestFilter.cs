@@ -1,3 +1,5 @@
+using Freeqy_APIs.Contracts.Common;
+
 namespace Freeqy_APIs.Contracts.Projects;
 
 public record ProjectRequestFilter(
@@ -5,5 +7,11 @@ public record ProjectRequestFilter(
 	string? Category,
 	ProjectStatus? Status,
 	ProjectVisibility? Visibility,
-	string? Tech
-);
+	string? Tech,
+	int PageNumber = 1,
+	int PageSize = 10
+) : RequestFilters
+{
+	public int PageNumber { get; init; } = PageNumber;
+	public int PageSize { get; init; } = PageSize;
+}

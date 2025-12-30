@@ -1,4 +1,5 @@
-﻿using Freeqy_APIs.Contracts.Category;
+﻿using Freeqy_APIs.Abstractions;
+using Freeqy_APIs.Contracts.Category;
 using Freeqy_APIs.Contracts.Projects;
 using Freeqy_APIs.Contracts.Technology;
 using Freeqy_APIs.Entities;
@@ -11,7 +12,7 @@ public class ProjectService(ApplicationDbContext dbContext, UserManager<Applicat
     private readonly ApplicationDbContext _dbContext = dbContext;
     private readonly UserManager<ApplicationUser> _userManager = userManager;
 
-    public async Task<Result<ProjectListResponse>> GetProjectsAsync(
+    public async Task<Result<PaginatedList<ProjectListItemResponse>>> GetProjectsAsync(
         ProjectRequestFilter filter,
         CancellationToken cancellationToken = default)
     {
@@ -36,11 +37,13 @@ public class ProjectService(ApplicationDbContext dbContext, UserManager<Applicat
         if (!string.IsNullOrWhiteSpace(filter.Tech))
             query = query.Where(p => p.Technologies.Any(t => t.Name == filter.Tech));
 
-        var projectList = await query
-            .ProjectToType<ProjectListItemResponse>()
-            .ToListAsync(cancellationToken);
+        var paginatedList = await PaginatedList<ProjectListItemResponse>.CreateAsync(
+            query.ProjectToType<ProjectListItemResponse>(),
+            filter.PageNumber,
+            filter.PageSize,
+            cancellationToken);
 
-        return Result.Success(new ProjectListResponse(projectList));
+        return Result.Success(paginatedList);
     }
 
     // Should Review This Service
