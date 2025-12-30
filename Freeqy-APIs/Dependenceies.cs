@@ -1,6 +1,8 @@
 using Freeqy_APIs.Configrautions;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Google;
 using Refit;
 
 namespace Freeqy_APIs;
@@ -92,8 +94,7 @@ public static class Dependenceies
         services.Configure<MailConfig>(configuration.GetSection(nameof(MailConfig)));
 
         // Configure OAuth Providers
-        services.Configure<GoogleOAuthOptions>(configuration.GetSection(GoogleOAuthOptions.SectionName));
-        services.Configure<GitHubOAuthOptions>(configuration.GetSection(GitHubOAuthOptions.SectionName));
+        services.AddOAuth(configuration);
 
         // Add Rate Limiting
         services.AddRateLimitingConfig(configuration);
@@ -102,6 +103,16 @@ public static class Dependenceies
         services.AddAIServices();
 
         return services;
+    }
+
+    private static IServiceCollection AddOAuth(this IServiceCollection service, IConfiguration configuration)
+    {
+        service.Configure<GoogleOAuthOptions>(configuration.GetSection(GoogleOAuthOptions.SectionName));
+        service.Configure<GitHubOAuthOptions>(configuration.GetSection(GitHubOAuthOptions.SectionName));
+        
+        
+        
+        return service;
     }
 
     private static IServiceCollection AddAIServices(this IServiceCollection services)
@@ -146,12 +157,15 @@ public static class Dependenceies
 
         var jwtSettings = configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>();
 
-        services.AddAuthentication(options =>
-        {
-            options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-            options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-        })
-        .AddJwtBearer(options =>
+        var googleConfig = configuration.GetSection(GoogleOAuthOptions.SectionName).Get<GoogleOAuthOptions>();
+        //
+        // services.AddAuthentication(options =>
+        // {
+        //     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        //     options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        // })
+        services.AddAuthentication()
+        .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
         {
             options.SaveToken = true;
             options.TokenValidationParameters = new TokenValidationParameters
@@ -160,10 +174,26 @@ public static class Dependenceies
                 ValidateIssuer = true,
                 ValidateAudience = true,
                 ValidateLifetime = true,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings?.Key!)),
-                ValidIssuer = jwtSettings?.Issuer,
-                ValidAudience = jwtSettings?.Audience
+                IssuerSigningKey = new SymmetricSecurityKey(
+                    Encoding.UTF8.GetBytes(jwtSettings.Key)),
+                ValidIssuer = jwtSettings.Issuer,
+                ValidAudience = jwtSettings.Audience
             };
+        })
+        .AddGoogle(GoogleDefaults.AuthenticationScheme, options =>
+        {
+            options.ClientId = googleConfig!.ClientId;
+            options.ClientSecret = googleConfig.ClientSecret;
+            options.CallbackPath = googleConfig.RedirectUri;
+            options.SaveTokens = true;
+            // Add required scopes
+            foreach (var scope in googleConfig.Scopes)
+            {
+                options.Scope.Add(scope);
+            }
+    
+            // Map claims properly
+            // options.ClaimActions.MapJsonKey("picture", "picture");
         });
 
         services.Configure<IdentityOptions>(options =>

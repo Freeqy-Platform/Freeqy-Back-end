@@ -11,6 +11,9 @@ public class UserErrors
     public static readonly Error EmailNotConfirmed =
         new("User.EmailNotConfirmed", "Email is not confirmed", StatusCodes.Status401Unauthorized);
     
+    public static readonly Error InvalidExternalLogin =
+        new("User.InvalidExternalLogin", "The External Login is Invalid", StatusCodes.Status401Unauthorized);
+    
     public static readonly Error InvalidRefreshToken =
         new("User.InvalidRefreshToken", "Invalid refresh token", StatusCodes.Status401Unauthorized);
 

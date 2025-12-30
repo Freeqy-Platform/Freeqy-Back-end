@@ -19,6 +19,80 @@ public class AuthService(UserManager<ApplicationUser> userManager, IJwtProvider 
     private readonly string _tempOrigin = "http://localhost:5173";
     private readonly int _refreshTokenExpiryInDays = 15;
 
+    public async Task<Result<AuthResponse>> HandleGoogleLoginAsync()
+    {
+        var info = await _signInManager.GetExternalLoginInfoAsync();
+        if (info == null)
+            return Result.Failure<AuthResponse>(UserErrors.InvalidExternalLogin);
+
+        var email = info.Principal.FindFirstValue(ClaimTypes.Email);
+        var firstName = info.Principal.FindFirstValue(ClaimTypes.GivenName);
+        var lastName = info.Principal.FindFirstValue(ClaimTypes.Surname);
+
+        
+        if (email == null)
+            return Result.Failure<AuthResponse>(UserErrors.InvalidExternalLogin);
+
+
+        var signInResult = await _signInManager.ExternalLoginSignInAsync(
+            info.LoginProvider,
+            info.ProviderKey,
+            isPersistent: false,
+            bypassTwoFactor: true
+        );
+
+        ApplicationUser user;
+
+        if (signInResult.Succeeded)
+        {
+            user = await _userManager.FindByLoginAsync(
+                info.LoginProvider,
+                info.ProviderKey
+            );
+        }
+        else
+        {
+            user = await _userManager.FindByEmailAsync(email);
+
+            if (user == null)
+            {
+                user = new ApplicationUser
+                {
+                    UserName = email,
+                    Email = email,
+                    FirstName = firstName ?? "",
+                    LastName = lastName ?? "",
+                    EmailConfirmed = true
+                };
+
+                await _userManager.CreateAsync(user);
+            }
+            
+            await _userManager.AddLoginAsync(user, info);
+        }
+
+        await _signInManager.SignInAsync(user, false);
+        
+        
+        var (token, expiresIn) = _jwtProvider.GenerateToken(user);
+        var refreshToken = GenerateRefreshToken();
+        var refreshTokenExpiryDate = DateTime.UtcNow.AddDays(_refreshTokenExpiryInDays);
+
+        user.RefreshTokens.Add(new RefreshToken()
+            {
+                Token = refreshToken,
+                ExpiresOn = refreshTokenExpiryDate
+            }
+        );
+            
+        await _userManager.UpdateAsync(user);
+
+        var response = new AuthResponse(user.Id, user.FirstName, user.LastName, user.Email, token, expiresIn, refreshToken, refreshTokenExpiryDate);
+
+        return Result.Success(response);
+    }
+
+    
     public async Task<Result<AuthResponse>> GetTokenAsync(string emailOrUsername, string password, CancellationToken cancellationToken = default)
     {
         ApplicationUser? user = null;

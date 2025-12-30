@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.RateLimiting;
 
 namespace Freeqy_APIs.Controllers;
@@ -6,11 +7,32 @@ namespace Freeqy_APIs.Controllers;
 [Route("api/v1/[controller]")]
 [EnableRateLimiting("authentication")]
 public class AuthController(ILogger<AuthController> logger,
-    IAuthService authService) : ControllerBase
+    IAuthService authService, SignInManager<ApplicationUser> signInManager) : ControllerBase
 {
     
     private readonly ILogger<AuthController> _logger = logger;
     private readonly IAuthService _authService = authService;
+    private readonly SignInManager<ApplicationUser> _signInManager =  signInManager;
+    
+    [HttpGet("google-login")]
+    public IActionResult GoogleLogin()
+    {
+        var properties = _signInManager.ConfigureExternalAuthenticationProperties(
+            GoogleDefaults.AuthenticationScheme,
+            Url.Action(nameof(GoogleResponse))
+        );
+
+        return Challenge(properties, GoogleDefaults.AuthenticationScheme);
+    }
+    
+    [HttpGet("google-response")]
+    public async Task<IActionResult> GoogleResponse()
+    {
+        var result = await _authService.HandleGoogleLoginAsync();
+        return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
+    }
+
+
     
     [HttpPost("forgot-password")]
     public async Task<IActionResult> ForgotPassword(
