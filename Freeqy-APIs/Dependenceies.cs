@@ -91,6 +91,10 @@ public static class Dependenceies
         // Configure Mail
         services.Configure<MailConfig>(configuration.GetSection(nameof(MailConfig)));
 
+        // Configure OAuth Providers
+        services.Configure<GoogleOAuthOptions>(configuration.GetSection(GoogleOAuthOptions.SectionName));
+        services.Configure<GitHubOAuthOptions>(configuration.GetSection(GitHubOAuthOptions.SectionName));
+
         // Add Rate Limiting
         services.AddRateLimitingConfig(configuration);
 
