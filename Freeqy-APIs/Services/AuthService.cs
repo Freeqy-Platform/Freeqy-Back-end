@@ -1,4 +1,5 @@
 ﻿using System.Security.Cryptography;
+using System.Text.RegularExpressions;
 using Freeqy_APIs.Helper;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.WebUtilities;
@@ -56,9 +57,11 @@ public class AuthService(UserManager<ApplicationUser> userManager, IJwtProvider 
 
             if (user == null)
             {
+                var username = await GenerateUniqueUsernameAsync(email);
+                
                 user = new ApplicationUser
                 {
-                    UserName = email,
+                    UserName = username,
                     Email = email,
                     FirstName = firstName ?? "",
                     LastName = lastName ?? "",
@@ -396,5 +399,38 @@ public class AuthService(UserManager<ApplicationUser> userManager, IJwtProvider 
         await Task.CompletedTask;
     }
     
-    
+    private async Task<string> GenerateUniqueUsernameAsync(string email)
+    {
+        // Extract the part before @ from email
+        var baseUsername = email.Split('@')[0];
+        
+        // Remove any invalid characters (keep only letters, numbers, and underscores)
+        baseUsername = Regex.Replace(baseUsername, @"[^a-zA-Z0-9_]", "");
+        
+        // Ensure username is not empty
+        if (string.IsNullOrWhiteSpace(baseUsername))
+        {
+            baseUsername = "user";
+        }
+        
+        // Check if username already exists
+        var existingUser = await _userManager.FindByNameAsync(baseUsername);
+        
+        if (existingUser == null)
+        {
+            return baseUsername;
+        }
+        
+        // If username exists, append a number to make it unique
+        var counter = 1;
+        var candidateUsername = $"{baseUsername}{counter}";
+        
+        while (await _userManager.FindByNameAsync(candidateUsername) != null)
+        {
+            counter++;
+            candidateUsername = $"{baseUsername}{counter}";
+        }
+        
+        return candidateUsername;
+    }
 }
