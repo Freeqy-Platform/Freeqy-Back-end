@@ -160,7 +160,7 @@ public static class Dependenceies
         var googleConfig = configuration.GetSection(GoogleOAuthOptions.SectionName).Get<GoogleOAuthOptions>();
         var githubConfig = configuration.GetSection(GitHubOAuthOptions.SectionName).Get<GitHubOAuthOptions>();
 
-        services.AddAuthentication()
+        var authBuilder = services.AddAuthentication()
         .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
         {
             options.SaveToken = true;
@@ -175,29 +175,39 @@ public static class Dependenceies
                 ValidIssuer = jwtSettings.Issuer,
                 ValidAudience = jwtSettings.Audience
             };
-        })
-        .AddGoogle(GoogleDefaults.AuthenticationScheme, options =>
-        {
-            options.ClientId = googleConfig!.ClientId;
-            options.ClientSecret = googleConfig.ClientSecret;
-            options.CallbackPath = googleConfig.RedirectUri;
-            options.SaveTokens = true;
-            foreach (var scope in googleConfig.Scopes)
-            {
-                options.Scope.Add(scope);
-            }
-        })
-        .AddGitHub(options =>
-        {
-            options.ClientId = githubConfig!.ClientId;
-            options.ClientSecret = githubConfig.ClientSecret;
-            options.CallbackPath = "/signin-github";
-            options.SaveTokens = true;
-            foreach (var scope in githubConfig.Scopes)
-            {
-                options.Scope.Add(scope);
-            }
         });
+
+        // Add Google OAuth only if configured
+        if (!string.IsNullOrWhiteSpace(googleConfig?.ClientId) && !string.IsNullOrWhiteSpace(googleConfig?.ClientSecret))
+        {
+            authBuilder.AddGoogle(GoogleDefaults.AuthenticationScheme, options =>
+            {
+                options.ClientId = googleConfig.ClientId;
+                options.ClientSecret = googleConfig.ClientSecret;
+                options.CallbackPath = googleConfig.RedirectUri;
+                options.SaveTokens = true;
+                foreach (var scope in googleConfig.Scopes)
+                {
+                    options.Scope.Add(scope);
+                }
+            });
+        }
+
+        // Add GitHub OAuth only if configured
+        if (!string.IsNullOrWhiteSpace(githubConfig?.ClientId) && !string.IsNullOrWhiteSpace(githubConfig?.ClientSecret))
+        {
+            authBuilder.AddGitHub(options =>
+            {
+                options.ClientId = githubConfig.ClientId;
+                options.ClientSecret = githubConfig.ClientSecret;
+                options.CallbackPath = "/signin-github";
+                options.SaveTokens = true;
+                foreach (var scope in githubConfig.Scopes)
+                {
+                    options.Scope.Add(scope);
+                }
+            });
+        }
 
         services.Configure<IdentityOptions>(options =>
         {
