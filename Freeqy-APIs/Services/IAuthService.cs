@@ -13,4 +13,5 @@ public interface IAuthService
     Task<Result> ResendConfirmationCodeAsync(ResendConfirmationEmailRequest request);
     Task<Result> ConfirmEmailAsync(ConfirmationEmailRequest request);
     Task<Result<AuthResponse>> HandleGoogleLoginAsync();
+    Task<Result<AuthResponse>> HandleGitHubLoginAsync();
 }

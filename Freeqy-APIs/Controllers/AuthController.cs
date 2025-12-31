@@ -32,6 +32,24 @@ public class AuthController(ILogger<AuthController> logger,
         return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
     }
 
+    [HttpGet("github-login")]
+    public IActionResult GitHubLogin()
+    {
+        var properties = _signInManager.ConfigureExternalAuthenticationProperties(
+            "GitHub",
+            Url.Action(nameof(GitHubResponse))
+        );
+
+        return Challenge(properties, "GitHub");
+    }
+    
+    [HttpGet("github-response")]
+    public async Task<IActionResult> GitHubResponse()
+    {
+        var result = await _authService.HandleGitHubLoginAsync();
+        return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
+    }
+
 
     
     [HttpPost("forgot-password")]

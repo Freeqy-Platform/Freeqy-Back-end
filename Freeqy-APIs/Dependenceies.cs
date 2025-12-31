@@ -158,12 +158,8 @@ public static class Dependenceies
         var jwtSettings = configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>();
 
         var googleConfig = configuration.GetSection(GoogleOAuthOptions.SectionName).Get<GoogleOAuthOptions>();
-        //
-        // services.AddAuthentication(options =>
-        // {
-        //     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-        //     options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-        // })
+        var githubConfig = configuration.GetSection(GitHubOAuthOptions.SectionName).Get<GitHubOAuthOptions>();
+
         services.AddAuthentication()
         .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
         {
@@ -186,14 +182,21 @@ public static class Dependenceies
             options.ClientSecret = googleConfig.ClientSecret;
             options.CallbackPath = googleConfig.RedirectUri;
             options.SaveTokens = true;
-            // Add required scopes
             foreach (var scope in googleConfig.Scopes)
             {
                 options.Scope.Add(scope);
             }
-    
-            // Map claims properly
-            // options.ClaimActions.MapJsonKey("picture", "picture");
+        })
+        .AddGitHub(options =>
+        {
+            options.ClientId = githubConfig!.ClientId;
+            options.ClientSecret = githubConfig.ClientSecret;
+            options.CallbackPath = "/signin-github";
+            options.SaveTokens = true;
+            foreach (var scope in githubConfig.Scopes)
+            {
+                options.Scope.Add(scope);
+            }
         });
 
         services.Configure<IdentityOptions>(options =>

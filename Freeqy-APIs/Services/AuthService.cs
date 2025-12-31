@@ -22,18 +22,35 @@ public class AuthService(UserManager<ApplicationUser> userManager, IJwtProvider 
 
     public async Task<Result<AuthResponse>> HandleGoogleLoginAsync()
     {
+        return await HandleExternalLoginAsync();
+    }
+
+    public async Task<Result<AuthResponse>> HandleGitHubLoginAsync()
+    {
+        return await HandleExternalLoginAsync();
+    }
+
+    private async Task<Result<AuthResponse>> HandleExternalLoginAsync()
+    {
         var info = await _signInManager.GetExternalLoginInfoAsync();
         if (info == null)
             return Result.Failure<AuthResponse>(UserErrors.InvalidExternalLogin);
 
         var email = info.Principal.FindFirstValue(ClaimTypes.Email);
-        var firstName = info.Principal.FindFirstValue(ClaimTypes.GivenName);
-        var lastName = info.Principal.FindFirstValue(ClaimTypes.Surname);
-
+        var firstName = info.Principal.FindFirstValue(ClaimTypes.GivenName) ?? "";
+        var lastName = info.Principal.FindFirstValue(ClaimTypes.Surname) ?? "";
         
+        // GitHub doesn't provide GivenName/Surname, try to get name and split it
+        if (string.IsNullOrEmpty(firstName) && info.LoginProvider == "GitHub")
+        {
+            var name = info.Principal.FindFirstValue(ClaimTypes.Name) ?? "";
+            var nameParts = name.Split(' ', 2);
+            firstName = nameParts.Length > 0 ? nameParts[0] : "";
+            lastName = nameParts.Length > 1 ? nameParts[1] : "";
+        }
+
         if (email == null)
             return Result.Failure<AuthResponse>(UserErrors.InvalidExternalLogin);
-
 
         var signInResult = await _signInManager.ExternalLoginSignInAsync(
             info.LoginProvider,
@@ -57,14 +74,25 @@ public class AuthService(UserManager<ApplicationUser> userManager, IJwtProvider 
 
             if (user == null)
             {
-                var username = await GenerateUniqueUsernameAsync(email);
+                // For GitHub, try to use the GitHub username first
+                string username;
+                if (info.LoginProvider == "GitHub")
+                {
+                    var githubUsername = info.Principal.FindFirstValue("urn:github:login") 
+                        ?? info.Principal.FindFirstValue("urn:github:name");
+                    username = await GenerateUniqueUsernameAsync(email, githubUsername);
+                }
+                else
+                {
+                    username = await GenerateUniqueUsernameAsync(email);
+                }
                 
                 user = new ApplicationUser
                 {
                     UserName = username,
                     Email = email,
-                    FirstName = firstName ?? "",
-                    LastName = lastName ?? "",
+                    FirstName = firstName,
+                    LastName = lastName,
                     EmailConfirmed = true
                 };
 
@@ -75,7 +103,6 @@ public class AuthService(UserManager<ApplicationUser> userManager, IJwtProvider 
         }
 
         await _signInManager.SignInAsync(user, false);
-        
         
         var (token, expiresIn) = _jwtProvider.GenerateToken(user);
         var refreshToken = GenerateRefreshToken();
@@ -399,9 +426,33 @@ public class AuthService(UserManager<ApplicationUser> userManager, IJwtProvider 
         await Task.CompletedTask;
     }
     
-    private async Task<string> GenerateUniqueUsernameAsync(string email)
+    private async Task<string> GenerateUniqueUsernameAsync(string email, string? preferredUsername = null)
     {
-        // Extract the part before @ from email
+        // If a preferred username is provided (e.g., GitHub username), try to use it first
+        if (!string.IsNullOrWhiteSpace(preferredUsername))
+        {
+            var sanitizedPreferred = Regex.Replace(preferredUsername, @"[^a-zA-Z0-9_]", "");
+            if (!string.IsNullOrWhiteSpace(sanitizedPreferred))
+            {
+                var existingUser = await _userManager.FindByNameAsync(sanitizedPreferred);
+                if (existingUser == null)
+                {
+                    return sanitizedPreferred;
+                }
+                
+                // Try with numbers appended
+                var counter = 1;
+                var candidateUsername = $"{sanitizedPreferred}{counter}";
+                while (await _userManager.FindByNameAsync(candidateUsername) != null)
+                {
+                    counter++;
+                    candidateUsername = $"{sanitizedPreferred}{counter}";
+                }
+                return candidateUsername;
+            }
+        }
+        
+        // Fallback: Extract the part before @ from email
         var baseUsername = email.Split('@')[0];
         
         // Remove any invalid characters (keep only letters, numbers, and underscores)
@@ -414,23 +465,23 @@ public class AuthService(UserManager<ApplicationUser> userManager, IJwtProvider 
         }
         
         // Check if username already exists
-        var existingUser = await _userManager.FindByNameAsync(baseUsername);
+        var existing = await _userManager.FindByNameAsync(baseUsername);
         
-        if (existingUser == null)
+        if (existing == null)
         {
             return baseUsername;
         }
         
         // If username exists, append a number to make it unique
-        var counter = 1;
-        var candidateUsername = $"{baseUsername}{counter}";
+        var num = 1;
+        var candidate = $"{baseUsername}{num}";
         
-        while (await _userManager.FindByNameAsync(candidateUsername) != null)
+        while (await _userManager.FindByNameAsync(candidate) != null)
         {
-            counter++;
-            candidateUsername = $"{baseUsername}{counter}";
+            num++;
+            candidate = $"{baseUsername}{num}";
         }
         
-        return candidateUsername;
+        return candidate;
     }
 }
