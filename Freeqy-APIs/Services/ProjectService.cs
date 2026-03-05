@@ -3,14 +3,20 @@ using Freeqy_APIs.Contracts.Category;
 using Freeqy_APIs.Contracts.Projects;
 using Freeqy_APIs.Contracts.Technology;
 using Freeqy_APIs.Entities;
+using Freeqy_APIs.Hubs;
+using Microsoft.AspNetCore.SignalR;
 using CategoryResponse = Freeqy_APIs.Contracts.Category.CategoryResponse;
 
 namespace Freeqy_APIs.Services;
 
-public class ProjectService(ApplicationDbContext dbContext, UserManager<ApplicationUser> userManager) : IProjectService
+public class ProjectService(
+    ApplicationDbContext dbContext,
+    UserManager<ApplicationUser> userManager,
+    IHubContext<ChatHub, IChatClient> hubContext) : IProjectService
 {
     private readonly ApplicationDbContext _dbContext = dbContext;
     private readonly UserManager<ApplicationUser> _userManager = userManager;
+    private readonly IHubContext<ChatHub, IChatClient> _hubContext = hubContext;
 
     public async Task<Result<PaginatedList<ProjectListItemResponse>>> GetProjectsAsync(
         ProjectRequestFilter filter,
@@ -189,6 +195,37 @@ public class ProjectService(ApplicationDbContext dbContext, UserManager<Applicat
         project.OwnerId  = userId; 
         
         await _dbContext.Projects.AddAsync(project, cancellationToken);
+
+        // Auto-create team chat for the new project
+        var teamConversation = new Conversation
+        {
+            Type = ConversationType.ProjectTeam,
+            ProjectId = project.Id,
+            Title = project.Name,
+            ChannelName = "General",
+            CreatedByUserId = userId,
+            Participants =
+            [
+                new ConversationParticipant
+                {
+                    UserId = userId,
+                    Role = ParticipantRole.Admin
+                }
+            ]
+        };
+
+        var systemMessage = new Message
+        {
+            ConversationId = teamConversation.Id,
+            SenderId = userId,
+            Content = "Team chat created.",
+            Type = MessageType.System
+        };
+
+        teamConversation.LastMessageAt = systemMessage.CreatedAt;
+        _dbContext.Conversations.Add(teamConversation);
+        _dbContext.Messages.Add(systemMessage);
+
         await _dbContext.SaveChangesAsync(cancellationToken);
         
         return Result.Success(project.Adapt<ProjectListItemResponse>());
@@ -329,11 +366,49 @@ public class ProjectService(ApplicationDbContext dbContext, UserManager<Applicat
         if (projectMember is null)
             return Result.Failure(ProjectErrors.MemberNotFound);
 
-          _dbContext.ProjectMembers.Remove(projectMember);
+        _dbContext.ProjectMembers.Remove(projectMember);
+
+        // Auto-remove member from ALL project channels and post system message
+        var teamChannels = await _dbContext.Conversations
+            .Include(c => c.Participants)
+            .Where(c => c.Type == ConversationType.ProjectTeam && c.ProjectId == projectId)
+            .ToListAsync(cancellationToken);
+
+        var removedUser = await _userManager.FindByIdAsync(memberId);
+
+        foreach (var channel in teamChannels)
+        {
+            var chatParticipant = channel.Participants
+                .FirstOrDefault(p => p.UserId == memberId);
+
+            if (chatParticipant is not null)
+            {
+                _dbContext.ConversationParticipants.Remove(chatParticipant);
+
+                var systemMsg = new Message
+                {
+                    ConversationId = channel.Id,
+                    SenderId = userId,
+                    Content = $"{removedUser?.FirstName} {removedUser?.LastName} was removed from the team.",
+                    Type = MessageType.System
+                };
+                _dbContext.Messages.Add(systemMsg);
+                channel.LastMessageAt = systemMsg.CreatedAt;
+
+                // Notify remaining participants via SignalR
+                foreach (var p in channel.Participants.Where(p => p.UserId != memberId))
+                {
+                    await _hubContext.Clients.User(p.UserId)
+                        .ReceiveMessage(channel.Id, new MessageResponse(
+                            systemMsg.Id, systemMsg.SenderId, "System", null,
+                            systemMsg.Content, systemMsg.Type.ToString(),
+                            systemMsg.CreatedAt, null, false));
+                }
+            }
+        }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
         return Result.Success();
-
     }
 
     public async Task<Result<ProjectMembersResponse>> GetProjectMembersAsync(string projectId, CancellationToken cancellationToken = default)

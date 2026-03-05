@@ -7,6 +7,7 @@ public class RateLimitingOptions
 	public RateLimitPolicy Global { get; set; } = new();
 	public RateLimitPolicy Authentication { get; set; } = new();
 	public RateLimitPolicy Api { get; set; } = new();
+	public RateLimitPolicy Messaging { get; set; } = new() { PermitLimit = 30, Window = 60, QueueLimit = 0 };
 }
 
 public class RateLimitPolicy

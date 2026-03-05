@@ -1,17 +1,23 @@
 using Freeqy_APIs.Contracts.Projects;
 using Freeqy_APIs.Helper;
+using Freeqy_APIs.Hubs;
 using Microsoft.AspNetCore.Identity.UI.Services;
+using Microsoft.AspNetCore.SignalR;
 
 namespace Freeqy_APIs.Services;
 
-public class ProjectInvitationService(ApplicationDbContext dbContext,UserManager<ApplicationUser> userManager,
+public class ProjectInvitationService(
+    ApplicationDbContext dbContext,
+    UserManager<ApplicationUser> userManager,
     IEmailSender emailService,
-    IHttpContextAccessor httpContextAccessor) : IProjectInvitationService 
+    IHttpContextAccessor httpContextAccessor,
+    IHubContext<ChatHub, IChatClient> hubContext) : IProjectInvitationService 
 {
     private readonly ApplicationDbContext _dbContext = dbContext;
     private readonly UserManager<ApplicationUser> _userManager = userManager;
     private readonly IEmailSender _emailService = emailService;
     private readonly IHttpContextAccessor _httpContextAccessor = httpContextAccessor;
+    private readonly IHubContext<ChatHub, IChatClient> _hubContext = hubContext;
 
     public async Task<Result<ProjectInvitationResponse>> SendInvitationAsync(string projectId,string senderId,
         SendProjectInvitationRequest request,
@@ -178,6 +184,47 @@ public class ProjectInvitationService(ApplicationDbContext dbContext,UserManager
             await _dbContext.ProjectMembers.AddAsync(projectMember, cancellationToken);
             invitation.Status = ProjectInvitationStatus.Accepted;
             invitation.RespondedAt = DateTime.UtcNow;
+
+            // Auto-add member to the project's "General" channel
+            var teamConversation = await _dbContext.Conversations
+                .Include(c => c.Participants)
+                .FirstOrDefaultAsync(c => c.Type == ConversationType.ProjectTeam
+                                          && c.ProjectId == invitation.ProjectId
+                                          && c.ChannelName == "General", cancellationToken);
+
+            if (teamConversation is not null)
+            {
+                var alreadyInChat = teamConversation.Participants.Any(p => p.UserId == userId);
+                if (!alreadyInChat)
+                {
+                    _dbContext.ConversationParticipants.Add(new ConversationParticipant
+                    {
+                        ConversationId = teamConversation.Id,
+                        UserId = userId,
+                        Role = ParticipantRole.Member
+                    });
+
+                    var joinMsg = new Message
+                    {
+                        ConversationId = teamConversation.Id,
+                        SenderId = userId,
+                        Content = $"{user.FirstName} {user.LastName} joined the team.",
+                        Type = MessageType.System
+                    };
+                    _dbContext.Messages.Add(joinMsg);
+                    teamConversation.LastMessageAt = joinMsg.CreatedAt;
+
+                    // Notify existing participants via SignalR
+                    foreach (var p in teamConversation.Participants)
+                    {
+                        await _hubContext.Clients.User(p.UserId)
+                            .ReceiveMessage(teamConversation.Id, new MessageResponse(
+                                joinMsg.Id, joinMsg.SenderId, "System", null,
+                                joinMsg.Content, joinMsg.Type.ToString(),
+                                joinMsg.CreatedAt, null, false));
+                    }
+                }
+            }
 
             await _dbContext.SaveChangesAsync(cancellationToken);
 

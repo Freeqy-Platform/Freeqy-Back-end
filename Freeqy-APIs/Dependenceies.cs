@@ -1,4 +1,5 @@
 using Freeqy_APIs.Configrautions;
+using Freeqy_APIs.Hubs;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication;
@@ -13,11 +14,12 @@ public static class Dependenceies
     {
         services.AddControllers();
 
-        services.AddCors(options => 
-            options.AddDefaultPolicy(builder => 
-                builder.AllowAnyOrigin()
+        services.AddCors(options =>
+            options.AddDefaultPolicy(builder =>
+                builder.SetIsOriginAllowed(_ => true)
                     .AllowAnyMethod()
                     .AllowAnyHeader()
+                    .AllowCredentials()
             )
         );
 
@@ -86,6 +88,7 @@ public static class Dependenceies
         services.AddScoped<IProjectService, ProjectService>();
         services.AddScoped<IProjectInvitationService, ProjectInvitationService>();
         services.AddScoped<IAiAnalysisService, AiAnalysisService>();
+        services.AddScoped<IMessagingService, MessagingService>();
         services.AddFluentValidation();
         
         services.AddHttpContextAccessor();
@@ -101,6 +104,9 @@ public static class Dependenceies
 
         // Add Refit service to make sure AI service is Working 
         services.AddAIServices();
+
+        // Add SignalR for real-time messaging
+        services.AddSignalR();
 
         return services;
     }
@@ -274,6 +280,23 @@ public static class Dependenceies
                         PermitLimit = rateLimitOptions.Api.PermitLimit,
                         Window = TimeSpan.FromSeconds(rateLimitOptions.Api.Window),
                         QueueLimit = rateLimitOptions.Api.QueueLimit
+                    });
+            });
+
+            // Messaging Rate Limiter - stricter limits for chat messages
+            options.AddPolicy("messaging", context =>
+            {
+                var userId = context.User.Identity?.IsAuthenticated == true
+                    ? context.User.GetUserId()
+                    : context.Connection.RemoteIpAddress?.ToString();
+
+                return RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey: userId ?? "anonymous",
+                    factory: _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = rateLimitOptions.Messaging.PermitLimit,
+                        Window = TimeSpan.FromSeconds(rateLimitOptions.Messaging.Window),
+                        QueueLimit = rateLimitOptions.Messaging.QueueLimit
                     });
             });
 

@@ -17,6 +17,9 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<UserSkill> UserSkills{ get; set; }    
     public DbSet<Track> Tracks{ get; set; }
     public DbSet<TrackRequest> TrackRequests { get; set; }
+    public DbSet<Conversation> Conversations { get; set; }
+    public DbSet<ConversationParticipant> ConversationParticipants { get; set; }
+    public DbSet<Message> Messages { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

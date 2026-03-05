@@ -1,4 +1,5 @@
 using Freeqy_APIs;
+using Freeqy_APIs.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -46,5 +47,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<ChatHub>("/hubs/chat");
 
 app.Run();
