@@ -68,10 +68,10 @@ public class AuthController(ILogger<AuthController> logger,
             //return Redirect(redirectUrl);
             var code = Guid.NewGuid().ToString();
             _cache.Set(code, result.Value, TimeSpan.FromMinutes(5));
-            return Redirect($"{_frontendOrigin}/oauth/callback?code={code}");
+            return Redirect($"{_frontendOrigin}/login?code={code}");
         }
 
-        return Redirect($"{_frontendOrigin}/oauth/callback?error=authentication_failed");
+        return Redirect($"{_frontendOrigin}/login?error=authentication_failed");
     }
 
     [HttpGet("oauth-token")]
