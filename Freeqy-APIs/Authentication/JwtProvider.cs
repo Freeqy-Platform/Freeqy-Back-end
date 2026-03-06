@@ -18,7 +18,7 @@ public class JwtProvider(IOptions<JwtOptions> options) : IJwtProvider
 
         var signingCredentials = new SigningCredentials(symmetricSecurityKey, SecurityAlgorithms.HmacSha256);
 
-        var expiresIn = 30;
+        var expiresIn = _options.ExpiryMinutes;
 
         var token = new JwtSecurityToken(
             issuer: _options.Issuer,
@@ -42,8 +42,11 @@ public class JwtProvider(IOptions<JwtOptions> options) : IJwtProvider
             {
                 IssuerSigningKey = symmetricSecurityKey,
                 ValidateIssuerSigningKey = true,
-                ValidateIssuer = false,
-                ValidateAudience = false,
+                ValidateIssuer = true,
+                ValidIssuer = _options.Issuer,
+                ValidateAudience = true,
+                ValidAudience = _options.Audience,
+                ValidateLifetime = false,
                 ClockSkew = TimeSpan.Zero
             }, out SecurityToken validatedToken);
 

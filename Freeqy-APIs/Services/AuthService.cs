@@ -9,7 +9,7 @@ using static Freeqy_APIs.Contracts.Authentication.RegisterRequest;
 namespace Freeqy_APIs.Services;
 
 public class AuthService(UserManager<ApplicationUser> userManager, IJwtProvider jwtProvider,
-    SignInManager<ApplicationUser> signInManager, ILogger<AuthService> logger, IHttpContextAccessor accessor, IEmailSender emailService) : IAuthService
+    SignInManager<ApplicationUser> signInManager, ILogger<AuthService> logger, IHttpContextAccessor accessor, IEmailSender emailService, IConfiguration configuration) : IAuthService
 {
     private readonly UserManager<ApplicationUser> _userManager = userManager;
     private readonly IJwtProvider _jwtProvider = jwtProvider;
@@ -17,7 +17,7 @@ public class AuthService(UserManager<ApplicationUser> userManager, IJwtProvider 
     private readonly ILogger<AuthService> _logger = logger;
     private readonly IHttpContextAccessor _httpContextAccessor = accessor;
     private readonly IEmailSender _emailService = emailService;
-    private readonly string _tempOrigin = "http://localhost:5173";
+    private readonly string _frontendOrigin = configuration["AppSettings:FrontendOrigin"] ?? "http://localhost:5173";
     private readonly int _refreshTokenExpiryInDays = 15;
 
     public async Task<Result<AuthResponse>> HandleGoogleLoginAsync()
@@ -202,6 +202,11 @@ public class AuthService(UserManager<ApplicationUser> userManager, IJwtProvider 
         {
             return Result.Failure<AuthResponse>(UserErrors.InvalidRefreshToken);
         }
+
+        if (userRefreshToken.IsExpired)
+        {
+            return Result.Failure<AuthResponse>(UserErrors.InvalidRefreshToken);
+        }
         
         userRefreshToken.RevokedOn = DateTime.UtcNow;
         
@@ -211,14 +216,14 @@ public class AuthService(UserManager<ApplicationUser> userManager, IJwtProvider 
 
         user.RefreshTokens.Add(new RefreshToken()
             {
-                Token = refreshToken,
+                Token = newRefreshToken,
                 ExpiresOn = refreshTokenExpiryDate
             }
         );
             
         await _userManager.UpdateAsync(user);
 
-        var response = new AuthResponse(user.Id, user.FirstName, user.LastName, user.Email, token, expiresIn, refreshToken, refreshTokenExpiryDate);
+        var response = new AuthResponse(user.Id, user.FirstName, user.LastName, user.Email, newToken, expiresIn, newRefreshToken, refreshTokenExpiryDate);
 
         return Result.Success(response);
     }
@@ -402,7 +407,7 @@ public class AuthService(UserManager<ApplicationUser> userManager, IJwtProvider 
             emailBody: new Dictionary<string, string>
             {
                 { "{{name}}", user.FirstName },
-                { "{{action_url}}", $"{_tempOrigin}/emailConfirmation?userId={user.Id}&code={code}" }
+                { "{{action_url}}", $"{_frontendOrigin}/emailConfirmation?userId={user.Id}&code={code}" }
             }
         );
         
@@ -418,7 +423,7 @@ public class AuthService(UserManager<ApplicationUser> userManager, IJwtProvider 
             new Dictionary<string, string>
             {
                 {"{{name}}", user.FirstName },
-                { "{{action_url}}", $"{_tempOrigin}/resetPassword?userId={user.Id}&code={code}" }
+                { "{{action_url}}", $"{_frontendOrigin}/resetPassword?userId={user.Id}&code={code}" }
             }
         );
         

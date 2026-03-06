@@ -7,12 +7,13 @@ namespace Freeqy_APIs.Controllers;
 [Route("api/v1/[controller]")]
 [EnableRateLimiting("authentication")]
 public class AuthController(ILogger<AuthController> logger,
-    IAuthService authService, SignInManager<ApplicationUser> signInManager) : ControllerBase
+    IAuthService authService, SignInManager<ApplicationUser> signInManager, IConfiguration configuration) : ControllerBase
 {
     
     private readonly ILogger<AuthController> _logger = logger;
     private readonly IAuthService _authService = authService;
     private readonly SignInManager<ApplicationUser> _signInManager =  signInManager;
+    private readonly string _frontendOrigin = configuration["AppSettings:FrontendOrigin"] ?? "http://localhost:5173";
     
     [HttpGet("google-login")]
     public IActionResult GoogleLogin()
@@ -29,7 +30,7 @@ public class AuthController(ILogger<AuthController> logger,
     public async Task<IActionResult> GoogleResponse()
     {
         var result = await _authService.HandleGoogleLoginAsync();
-        return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
+        return HandleOAuthCallback(result);
     }
 
     [HttpGet("github-login")]
@@ -47,7 +48,22 @@ public class AuthController(ILogger<AuthController> logger,
     public async Task<IActionResult> GitHubResponse()
     {
         var result = await _authService.HandleGitHubLoginAsync();
-        return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
+        return HandleOAuthCallback(result);
+    }
+
+    private IActionResult HandleOAuthCallback(Result<AuthResponse> result)
+    {
+        if (result.IsSuccess)
+        {
+            var auth = result.Value;
+            var redirectUrl = $"{_frontendOrigin}/oauth/callback" +
+                $"?token={Uri.EscapeDataString(auth.Token)}" +
+                $"&refreshToken={Uri.EscapeDataString(auth.RefreshToken)}" +
+                $"&expiresIn={auth.ExpiresIn}";
+            return Redirect(redirectUrl);
+        }
+
+        return Redirect($"{_frontendOrigin}/oauth/callback?error=authentication_failed");
     }
 
 
