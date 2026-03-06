@@ -89,6 +89,7 @@ public static class Dependenceies
         services.AddScoped<IProjectInvitationService, ProjectInvitationService>();
         services.AddScoped<IAiAnalysisService, AiAnalysisService>();
         services.AddScoped<IMessagingService, MessagingService>();
+        services.AddMemoryCache();
         services.AddFluentValidation();
         
         services.AddHttpContextAccessor();
