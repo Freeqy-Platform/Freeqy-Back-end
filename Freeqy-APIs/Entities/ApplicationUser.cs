@@ -20,6 +20,7 @@ public sealed class ApplicationUser : IdentityUser
 	public List<RefreshToken> RefreshTokens { get; set; } = [];
 	public ICollection<UserSkill> Skills { set; get; } = [];
 	public ICollection<ProjectMembers> ProjectMembers { get; set; } = new List<ProjectMembers>();
+	public ICollection<UserBadge> UserBadges { get; set; } = [];
 
 	public ICollection<UserSocialMedia> SocialMediaLinks { get; set; } = [];
 	public ICollection<UserEducation> Educations { get; set; } = [];

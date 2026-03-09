@@ -1,3 +1,4 @@
+using Freeqy_APIs.BackgroundJobs;
 using Freeqy_APIs.Configrautions;
 using Freeqy_APIs.Hubs;
 using Microsoft.AspNetCore.Identity.UI.Services;
@@ -89,6 +90,8 @@ public static class Dependenceies
         services.AddScoped<IProjectInvitationService, ProjectInvitationService>();
         services.AddScoped<IAiAnalysisService, AiAnalysisService>();
         services.AddScoped<IMessagingService, MessagingService>();
+        services.AddScoped<IBadgeService, BadgeService>();
+        services.AddHostedService<BadgeAssignmentJob>();
         services.AddMemoryCache();
         services.AddFluentValidation();
         
