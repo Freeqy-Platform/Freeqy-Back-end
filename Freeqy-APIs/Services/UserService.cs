@@ -1,4 +1,5 @@
-﻿using Freeqy_APIs.Contracts.Tracks;
+﻿using Freeqy_APIs.Contracts.Badges;
+using Freeqy_APIs.Contracts.Tracks;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
 using System.Linq;
@@ -32,6 +33,8 @@ public class UserService(
 			.Include(u => u.Skills)
 			.ThenInclude(us => us.Skill)
 			.Include(u => u.Track)
+			.Include(u => u.UserBadges)
+			.ThenInclude(ub => ub.Badge)
 			.SingleAsync();
 
 		return Result.Success(BuildUserProfileResponse(user));
@@ -212,6 +215,13 @@ public class UserService(
 				c.CredentialId,
 				c.CredentialUrl,
 				c.Description
+			)),
+			Badges: user.UserBadges.Select(ub => new BadgeResponse(
+				ub.Badge.Id,
+				ub.Badge.Name,
+				ub.Badge.Description,
+				ub.Badge.Type.ToString(),
+				ub.EarnedAt
 			))
 		);
 	}
@@ -226,6 +236,8 @@ public class UserService(
 			.Include(u => u.Skills)
 			.ThenInclude(us => us.Skill)
 			.Include(u => u.Track)
+			.Include(u => u.UserBadges)
+			.ThenInclude(ub => ub.Badge)
 			.SingleOrDefaultAsync(cancellationToken);
 
 		if (user is null)
