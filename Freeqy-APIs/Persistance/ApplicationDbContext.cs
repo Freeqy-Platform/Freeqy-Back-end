@@ -22,6 +22,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Message> Messages { get; set; }
     public DbSet<Badge> Badges { get; set; }
     public DbSet<UserBadge> UserBadges { get; set; }
+    public DbSet<UserProjectHistory> UserProjectHistories { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

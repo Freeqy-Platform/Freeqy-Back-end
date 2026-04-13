@@ -88,6 +88,7 @@ public static class Dependenceies
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<IProjectService, ProjectService>();
         services.AddScoped<IProjectInvitationService, ProjectInvitationService>();
+        services.AddScoped<IProjectHistoryService, ProjectHistoryService>();
         services.AddScoped<IAiAnalysisService, AiAnalysisService>();
         services.AddScoped<IMessagingService, MessagingService>();
         services.AddScoped<IBadgeService, BadgeService>();

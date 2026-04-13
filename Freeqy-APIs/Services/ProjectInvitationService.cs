@@ -11,13 +11,15 @@ public class ProjectInvitationService(
     UserManager<ApplicationUser> userManager,
     IEmailSender emailService,
     IHttpContextAccessor httpContextAccessor,
-    IHubContext<ChatHub, IChatClient> hubContext) : IProjectInvitationService 
+    IHubContext<ChatHub, IChatClient> hubContext,
+    IProjectHistoryService historyService) : IProjectInvitationService 
 {
     private readonly ApplicationDbContext _dbContext = dbContext;
     private readonly UserManager<ApplicationUser> _userManager = userManager;
     private readonly IEmailSender _emailService = emailService;
     private readonly IHttpContextAccessor _httpContextAccessor = httpContextAccessor;
     private readonly IHubContext<ChatHub, IChatClient> _hubContext = hubContext;
+    private readonly IProjectHistoryService _historyService = historyService;
 
     public async Task<Result<ProjectInvitationResponse>> SendInvitationAsync(string projectId,string senderId,
         SendProjectInvitationRequest request,
@@ -227,6 +229,16 @@ public class ProjectInvitationService(
             }
 
             await _dbContext.SaveChangesAsync(cancellationToken);
+
+            await _historyService.RecordEventAsync(
+                userId,
+                invitation.ProjectId,
+                invitation.Project.Name,
+                invitation.Project.Category?.Name ?? string.Empty,
+                HistoryEventType.Joined,
+                role: "Member",
+                projectStatusAtEvent: invitation.Project.Status,
+                ct: cancellationToken);
 
             var message = $"{user.FirstName} {user.LastName} accepted the project invitation";
             return Result.Success(new RespondToInvitationResponse(

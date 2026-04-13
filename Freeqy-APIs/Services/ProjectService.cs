@@ -12,11 +12,13 @@ namespace Freeqy_APIs.Services;
 public class ProjectService(
     ApplicationDbContext dbContext,
     UserManager<ApplicationUser> userManager,
-    IHubContext<ChatHub, IChatClient> hubContext) : IProjectService
+    IHubContext<ChatHub, IChatClient> hubContext,
+    IProjectHistoryService historyService) : IProjectService
 {
     private readonly ApplicationDbContext _dbContext = dbContext;
     private readonly UserManager<ApplicationUser> _userManager = userManager;
     private readonly IHubContext<ChatHub, IChatClient> _hubContext = hubContext;
+    private readonly IProjectHistoryService _historyService = historyService;
 
     public async Task<Result<PaginatedList<ProjectListItemResponse>>> GetProjectsAsync(
         ProjectRequestFilter filter,
@@ -89,6 +91,36 @@ public class ProjectService(
         {
             project.Status = request.ProjectStatus;
             await _dbContext.SaveChangesAsync(cancellationToken);
+
+            if (request.ProjectStatus == ProjectStatus.Completed)
+            {
+                await _historyService.RecordEventAsync(
+                    userId,
+                    project.Id,
+                    project.Name,
+                    string.Empty,
+                    HistoryEventType.ProjectCompleted,
+                    role: "Owner",
+                    projectStatusAtEvent: ProjectStatus.Completed,
+                    ct: cancellationToken);
+
+                var members = await _dbContext.ProjectMembers
+                    .Where(pm => pm.ProjectId == id && pm.IsActive)
+                    .ToListAsync(cancellationToken);
+
+                foreach (var m in members)
+                {
+                    await _historyService.RecordEventAsync(
+                        m.UserId,
+                        project.Id,
+                        project.Name,
+                        string.Empty,
+                        HistoryEventType.ProjectCompleted,
+                        role: m.Role,
+                        projectStatusAtEvent: ProjectStatus.Completed,
+                        ct: cancellationToken);
+                }
+            }
         }
             
         return  Result.Success();
@@ -227,6 +259,16 @@ public class ProjectService(
         _dbContext.Messages.Add(systemMessage);
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+
+        await _historyService.RecordEventAsync(
+            userId,
+            project.Id,
+            project.Name,
+            category.Name,
+            HistoryEventType.Joined,
+            role: "Owner",
+            projectStatusAtEvent: ProjectStatus.Pending,
+            ct: cancellationToken);
         
         return Result.Success(project.Adapt<ProjectListItemResponse>());
     }
@@ -286,6 +328,7 @@ public class ProjectService(
         CancellationToken cancellationToken = default)
     {
         var project = await GetActiveProjects()
+            .Include(p => p.Category)
             .FirstOrDefaultAsync(p => p.Id == projectId, cancellationToken);
 
         if (project is null)
@@ -293,6 +336,34 @@ public class ProjectService(
 
         if (project.OwnerId != userId)
             return Result.Failure(ProjectErrors.Forbidden);
+
+        var activeMembers = await _dbContext.ProjectMembers
+            .Where(pm => pm.ProjectId == projectId && pm.IsActive)
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+
+        await _historyService.RecordEventAsync(
+            userId,
+            project.Id,
+            project.Name,
+            project.Category?.Name ?? string.Empty,
+            HistoryEventType.ProjectDeleted,
+            role: "Owner",
+            projectStatusAtEvent: project.Status,
+            ct: cancellationToken);
+
+        foreach (var member in activeMembers.Where(pm => pm.UserId != userId))
+        {
+            await _historyService.RecordEventAsync(
+                member.UserId,
+                project.Id,
+                project.Name,
+                project.Category?.Name ?? string.Empty,
+                HistoryEventType.ProjectDeleted,
+                role: member.Role,
+                projectStatusAtEvent: project.Status,
+                ct: cancellationToken);
+        }
 
         project.DeletedAt = DateTime.UtcNow;
         project.UpdatedAt = DateTime.UtcNow;
@@ -353,6 +424,7 @@ public class ProjectService(
     public async Task<Result> RemoveMemberFromProject(string projectId, string userId, string memberId, CancellationToken cancellationToken = default)
     {
         var project = await GetActiveProjects()
+         .Include(p => p.Category)
          .FirstOrDefaultAsync(p => p.Id == projectId, cancellationToken);
 
         if (project is null)
@@ -408,6 +480,17 @@ public class ProjectService(
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+
+        await _historyService.RecordEventAsync(
+            memberId,
+            projectId,
+            project.Name,
+            project.Category?.Name ?? string.Empty,
+            HistoryEventType.Left,
+            role: projectMember.Role,
+            projectStatusAtEvent: project.Status,
+            ct: cancellationToken);
+
         return Result.Success();
     }
 
@@ -461,6 +544,16 @@ public class ProjectService(
 
         projectMember.Role = request.Role;
         await _dbContext.SaveChangesAsync(cancellationToken);
+
+        await _historyService.RecordEventAsync(
+            memberId,
+            projectId,
+            project.Name,
+            string.Empty,
+            HistoryEventType.RoleChanged,
+            role: request.Role,
+            projectStatusAtEvent: project.Status,
+            ct: cancellationToken);
 
         return Result.Success();
     }
