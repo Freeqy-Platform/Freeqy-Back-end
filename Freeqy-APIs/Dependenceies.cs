@@ -171,22 +171,27 @@ public static class Dependenceies
         var googleConfig = configuration.GetSection(GoogleOAuthOptions.SectionName).Get<GoogleOAuthOptions>();
         var githubConfig = configuration.GetSection(GitHubOAuthOptions.SectionName).Get<GitHubOAuthOptions>();
 
-        var authBuilder = services.AddAuthentication()
-        .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
-        {
-            options.SaveToken = true;
-            options.TokenValidationParameters = new TokenValidationParameters
+        // Use JWT as the default scheme so API endpoints return 401/403 instead of redirecting to login page
+        var authBuilder = services.AddAuthentication(options =>
             {
-                ValidateIssuerSigningKey = true,
-                ValidateIssuer = true,
-                ValidateAudience = true,
-                ValidateLifetime = true,
-                IssuerSigningKey = new SymmetricSecurityKey(
-                    Encoding.UTF8.GetBytes(jwtSettings.Key)),
-                ValidIssuer = jwtSettings.Issuer,
-                ValidAudience = jwtSettings.Audience
-            };
-        });
+                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            })
+            .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
+            {
+                options.SaveToken = true;
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuerSigningKey = true,
+                    ValidateIssuer = true,
+                    ValidateAudience = true,
+                    ValidateLifetime = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(
+                        Encoding.UTF8.GetBytes(jwtSettings.Key)),
+                    ValidIssuer = jwtSettings.Issuer,
+                    ValidAudience = jwtSettings.Audience
+                };
+            });
 
         // Add Google OAuth only if configured
         if (!string.IsNullOrWhiteSpace(googleConfig?.ClientId) && !string.IsNullOrWhiteSpace(googleConfig?.ClientSecret))
@@ -197,10 +202,7 @@ public static class Dependenceies
                 options.ClientSecret = googleConfig.ClientSecret;
                 options.CallbackPath = googleConfig.RedirectUri;
                 options.SaveTokens = true;
-                foreach (var scope in googleConfig.Scopes)
-                {
-                    options.Scope.Add(scope);
-                }
+                foreach (var scope in googleConfig.Scopes) options.Scope.Add(scope);
             });
         }
 
@@ -213,12 +215,41 @@ public static class Dependenceies
                 options.ClientSecret = githubConfig.ClientSecret;
                 options.CallbackPath = "/signin-github";
                 options.SaveTokens = true;
-                foreach (var scope in githubConfig.Scopes)
-                {
-                    options.Scope.Add(scope);
-                }
+                foreach (var scope in githubConfig.Scopes) options.Scope.Add(scope);
             });
         }
+
+        // Prevent cookie auth from redirecting API calls to /Account/Login -> return 401/403 instead
+        services.ConfigureApplicationCookie(options =>
+        {
+            options.Events = new Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationEvents
+            {
+                OnRedirectToLogin = ctx =>
+                {
+                    if (ctx.Request.Path.StartsWithSegments("/api") ||
+                        ctx.Request.Headers["Accept"].ToString().Contains("application/json"))
+                    {
+                        ctx.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                        return Task.CompletedTask;
+                    }
+
+                    ctx.Response.Redirect(ctx.RedirectUri);
+                    return Task.CompletedTask;
+                },
+                OnRedirectToAccessDenied = ctx =>
+                {
+                    if (ctx.Request.Path.StartsWithSegments("/api") ||
+                        ctx.Request.Headers["Accept"].ToString().Contains("application/json"))
+                    {
+                        ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
+                        return Task.CompletedTask;
+                    }
+
+                    ctx.Response.Redirect(ctx.RedirectUri);
+                    return Task.CompletedTask;
+                }
+            };
+        });
 
         services.Configure<IdentityOptions>(options =>
         {
