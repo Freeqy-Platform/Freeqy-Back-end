@@ -7,6 +7,7 @@ public record ProjectRequest
     ProjectStatus Status,
     ProjectVisibility Visibility,
     List<string> TechnologyIds,
-    TimeSpan EstimatedTime,
+    DateOnly StartDate,
+    DateOnly EndDate,
     string CategoryId
 );

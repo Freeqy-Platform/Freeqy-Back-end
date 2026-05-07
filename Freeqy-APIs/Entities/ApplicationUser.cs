@@ -1,4 +1,4 @@
-﻿namespace Freeqy_APIs.Entities;
+namespace Freeqy_APIs.Entities;
 
 public sealed class ApplicationUser : IdentityUser
 {
@@ -15,6 +15,8 @@ public sealed class ApplicationUser : IdentityUser
 	public string? BannerPhotoUrl { get; set; }
 	public string? Summary { get; set; }
 	public UserAvailability Availability { get; set; } = UserAvailability.Available;
+	public string? BlockReason { get; set; }
+	public DateTime? BlockedAt { get; set; }
 
 	public Track? Track { get; set; }
 	public List<RefreshToken> RefreshTokens { get; set; } = [];
