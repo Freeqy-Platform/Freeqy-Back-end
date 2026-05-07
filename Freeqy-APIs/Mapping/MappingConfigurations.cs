@@ -1,16 +1,24 @@
 ﻿using Freeqy_APIs.Contracts.Projects;
 using Freeqy_APIs.Contracts.AiAnalysis;
+using Freeqy_APIs.Contracts.Meetings;
+using Freeqy_APIs.Entities;
 
 namespace Freeqy_APIs.Mapping;
 
 public class MappingConfigurations : IRegister
 {
-    public void Register(TypeAdapterConfig config)
-    {
-        config.NewConfig<RegisterRequest, ApplicationUser>();
-        
-        config.NewConfig<ApplicationUser, SimpleUserDto>()
-            .Map(dest => dest.Name, src => src.FirstName + " " + src.LastName);
+	public void Register(TypeAdapterConfig config)
+	{
+		config.NewConfig<RegisterRequest, ApplicationUser>();
+
+		config.NewConfig<ApplicationUser, SimpleUserDto>()
+			.Map(dest => dest.Name, src => src.FirstName + " " + src.LastName);
+
+		config.NewConfig<CreateMeetingRequest, Meeting>()
+			.Map(dest => dest.Id, src => Guid.NewGuid().ToString())
+			.Map(dest => dest.CreatedAt, src => DateTime.UtcNow);
+
+		config.NewConfig<Meeting, MeetingResponse>();
 
          config.NewConfig<Project, ProjectListItemResponse>()  
               .Map(dest => dest.Owner, src => src.Owner.Adapt<SimpleUserDto>())

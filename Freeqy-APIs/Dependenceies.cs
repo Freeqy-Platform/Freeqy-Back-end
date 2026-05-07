@@ -92,6 +92,7 @@ public static class Dependenceies
         services.AddScoped<IAiAnalysisService, AiAnalysisService>();
         services.AddScoped<IMessagingService, MessagingService>();
         services.AddScoped<IBadgeService, BadgeService>();
+        services.AddScoped<IMeetingService, MeetingService>();
         services.AddHostedService<BadgeAssignmentJob>();
         services.AddMemoryCache();
         services.AddFluentValidation();
