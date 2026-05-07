@@ -58,12 +58,4 @@ public class MeetingsController(IMeetingService meetingService) : ControllerBase
         var result = await _meetingService.DeleteMeetingAsync(id, User.GetUserId()!, cancellationToken);
         return result.IsSuccess ? NoContent() : result.ToProblem();
     }
-
-    [HttpPost("{id}/restore")]
-    [Authorize]
-    public async Task<IActionResult> RestoreMeeting(string id, CancellationToken cancellationToken)
-    {
-        var result = await _meetingService.RestoreMeetingAsync(id, User.GetUserId()!, cancellationToken);
-        return result.IsSuccess ? NoContent() : result.ToProblem();
-    }
 }

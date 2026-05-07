@@ -16,6 +16,4 @@ public interface IMeetingService
     Task<Result<MeetingResponse>> UpdateMeetingAsync(string meetingId, UpdateMeetingRequest request, string userId, CancellationToken cancellationToken = default);
 
     Task<Result> DeleteMeetingAsync(string meetingId, string userId, CancellationToken cancellationToken = default);
-
-    Task<Result> RestoreMeetingAsync(string meetingId, string userId, CancellationToken cancellationToken = default);
 }

@@ -19,7 +19,6 @@ public class MappingConfigurations : IRegister
 			.Map(dest => dest.CreatedAt, src => DateTime.UtcNow);
 
 		config.NewConfig<Meeting, MeetingResponse>();
-
          config.NewConfig<Project, ProjectListItemResponse>()  
               .Map(dest => dest.Owner, src => src.Owner.Adapt<SimpleUserDto>())
               .Map(dest => dest.Category, src => src.Category.Adapt<CategoryDto>())
