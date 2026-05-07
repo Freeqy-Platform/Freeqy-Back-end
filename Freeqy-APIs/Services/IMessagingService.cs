@@ -52,4 +52,8 @@ public interface IMessagingService
     // ── Read Tracking ───────────────────────────────────────────────
     Task<Result> MarkConversationAsReadAsync(
         string userId, string conversationId, CancellationToken ct = default);
+
+    // ── Mute ────────────────────────────────────────────────────────
+    Task<Result> ToggleMuteAsync(
+        string userId, string conversationId, bool mute, CancellationToken ct = default);
 }

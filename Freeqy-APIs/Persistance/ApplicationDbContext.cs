@@ -1,4 +1,4 @@
-﻿namespace Freeqy_APIs.Persistancec;
+namespace Freeqy_APIs.Persistancec;
 
 public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) 
     : IdentityDbContext<ApplicationUser>(options)
@@ -23,6 +23,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Badge> Badges { get; set; }
     public DbSet<UserBadge> UserBadges { get; set; }
     public DbSet<UserProjectHistory> UserProjectHistories { get; set; }
+    public DbSet<Notification> Notifications { get; set; }
+    public DbSet<NotificationPreference> NotificationPreferences { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

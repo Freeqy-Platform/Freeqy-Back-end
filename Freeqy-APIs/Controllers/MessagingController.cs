@@ -148,4 +148,17 @@ public class MessagingController(IMessagingService messagingService) : Controlle
         var result = await _messagingService.MarkConversationAsReadAsync(User.GetUserId()!, conversationId, ct);
         return result.IsSuccess ? Ok(new { message = "Conversation marked as read" }) : result.ToProblem();
     }
+
+    // ── Mute / Unmute ────────────────────────────────────────────────
+
+    /// <summary>Mute or unmute notifications for a conversation.</summary>
+    [HttpPatch("conversations/{conversationId}/mute")]
+    public async Task<IActionResult> ToggleMute(
+        string conversationId, [FromQuery] bool mute = true, CancellationToken ct = default)
+    {
+        var result = await _messagingService.ToggleMuteAsync(User.GetUserId()!, conversationId, mute, ct);
+        return result.IsSuccess
+            ? Ok(new { message = mute ? "Conversation muted" : "Conversation unmuted" })
+            : result.ToProblem();
+    }
 }

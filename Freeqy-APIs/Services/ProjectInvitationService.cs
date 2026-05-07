@@ -12,7 +12,8 @@ public class ProjectInvitationService(
     IEmailSender emailService,
     IHttpContextAccessor httpContextAccessor,
     IHubContext<ChatHub, IChatClient> hubContext,
-    IProjectHistoryService historyService) : IProjectInvitationService 
+    IProjectHistoryService historyService,
+    INotificationService notificationService) : IProjectInvitationService 
 {
     private readonly ApplicationDbContext _dbContext = dbContext;
     private readonly UserManager<ApplicationUser> _userManager = userManager;
@@ -20,6 +21,7 @@ public class ProjectInvitationService(
     private readonly IHttpContextAccessor _httpContextAccessor = httpContextAccessor;
     private readonly IHubContext<ChatHub, IChatClient> _hubContext = hubContext;
     private readonly IProjectHistoryService _historyService = historyService;
+    private readonly INotificationService _notificationService = notificationService;
 
     public async Task<Result<ProjectInvitationResponse>> SendInvitationAsync(string projectId,string senderId,
         SendProjectInvitationRequest request,
@@ -76,6 +78,21 @@ public class ProjectInvitationService(
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         var emailSendResult = await SendInvitationEmailAsync(invitation, project, senderUser!);
+
+        // Notify the invitee
+        if (invitedUser is not null)
+        {
+            await _notificationService.SendAsync(
+                recipientId: invitedUser.Id,
+                actorId: senderId,
+                type: NotificationType.InvitationReceived,
+                title: "Project Invitation",
+                message: $"{senderUser!.FirstName} {senderUser.LastName} invited you to join \"{project.Name}\"",
+                entityType: "Invitation",
+                entityId: invitation.Id,
+                priority: NotificationPriority.High,
+                ct: cancellationToken);
+        }
 
         var response = (invitation, project, senderUser).Adapt<ProjectInvitationResponse>();
     
@@ -240,6 +257,17 @@ public class ProjectInvitationService(
                 projectStatusAtEvent: invitation.Project.Status,
                 ct: cancellationToken);
 
+            // Notify project owner that invitation was accepted
+            await _notificationService.SendAsync(
+                recipientId: invitation.Project.OwnerId,
+                actorId: userId,
+                type: NotificationType.InvitationAccepted,
+                title: "Invitation Accepted",
+                message: $"{user.FirstName} {user.LastName} accepted your invitation to \"{invitation.Project.Name}\"",
+                entityType: "Project",
+                entityId: invitation.ProjectId,
+                ct: cancellationToken);
+
             var message = $"{user.FirstName} {user.LastName} accepted the project invitation";
             return Result.Success(new RespondToInvitationResponse(
                 InviteId: invitation.Id,
@@ -254,6 +282,17 @@ public class ProjectInvitationService(
             invitation.RespondedReason = request.RejectionReason;
 
             await _dbContext.SaveChangesAsync(cancellationToken);
+
+            // Notify project owner that invitation was rejected
+            await _notificationService.SendAsync(
+                recipientId: invitation.Project.OwnerId,
+                actorId: userId,
+                type: NotificationType.InvitationRejected,
+                title: "Invitation Rejected",
+                message: $"{user.FirstName} {user.LastName} rejected your invitation to \"{invitation.Project.Name}\"",
+                entityType: "Project",
+                entityId: invitation.ProjectId,
+                ct: cancellationToken);
 
             var message = $"{user.FirstName} {user.LastName} rejected the project invitation";
             return Result.Success(new RespondToInvitationResponse(

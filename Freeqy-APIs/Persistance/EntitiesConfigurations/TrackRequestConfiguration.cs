@@ -11,8 +11,7 @@ public class TrackRequestConfiguration : IEntityTypeConfiguration<TrackRequest>
 			.HasMaxLength(100);
 		
 		builder.Property(tr => tr.RequestedBy)
-			.IsRequired()
-			.HasMaxLength(100);
+			.IsRequired();
 		
 		builder.Property(tr => tr.Status)
 			.IsRequired();

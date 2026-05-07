@@ -1,4 +1,5 @@
 using Freeqy_APIs.Contracts.Messaging;
+using Freeqy_APIs.Contracts.Notifications;
 
 namespace Freeqy_APIs.Hubs;
 
@@ -34,4 +35,14 @@ public interface IChatClient
 
     /// <summary>Called when a user goes offline.</summary>
     Task UserOffline(string userId);
+
+    // ═══════════════════════════════════════════════════════════════
+    //  NOTIFICATIONS
+    // ═══════════════════════════════════════════════════════════════
+
+    /// <summary>Called when a new notification is received.</summary>
+    Task ReceiveNotification(NotificationResponse notification);
+
+    /// <summary>Called when the user's unread notification count changes.</summary>
+    Task UnreadCountUpdated(int unreadCount);
 }

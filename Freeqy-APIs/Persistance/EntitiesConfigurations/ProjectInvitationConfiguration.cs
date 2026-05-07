@@ -6,11 +6,7 @@ public class ProjectInvitationConfiguration : IEntityTypeConfiguration<ProjectIn
     {
         builder.HasKey(pi => pi.Id);
 
-        builder.Property(pi => pi.Id)
-            .HasMaxLength(100);
-
         builder.Property(pi => pi.ProjectId)
-            .HasMaxLength(100)
             .IsRequired();
 
         builder.Property(pi => pi.InvitedEmail)
@@ -18,11 +14,7 @@ public class ProjectInvitationConfiguration : IEntityTypeConfiguration<ProjectIn
             .IsRequired();
 
         builder.Property(pi => pi.SentByUserId)
-            .HasMaxLength(100)
             .IsRequired();
-
-        builder.Property(pi => pi.InvitedUserId)
-            .HasMaxLength(100);
 
         builder.Property(pi => pi.RespondedReason)
             .HasMaxLength(500);

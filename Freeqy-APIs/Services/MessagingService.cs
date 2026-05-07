@@ -7,11 +7,13 @@ namespace Freeqy_APIs.Services;
 public class MessagingService(
     ApplicationDbContext context,
     UserManager<ApplicationUser> userManager,
-    IHubContext<ChatHub, IChatClient> hubContext) : IMessagingService
+    IHubContext<ChatHub, IChatClient> hubContext,
+    INotificationService notificationService) : IMessagingService
 {
     private readonly ApplicationDbContext _context = context;
     private readonly UserManager<ApplicationUser> _userManager = userManager;
     private readonly IHubContext<ChatHub, IChatClient> _hubContext = hubContext;
+    private readonly INotificationService _notificationService = notificationService;
 
     private const int MaxChannelsPerProject = 5;
 
@@ -596,6 +598,29 @@ public class MessagingService(
                 .ReceiveMessage(conversationId, response);
         }
 
+        // Send notifications to offline / non-muted participants (with deduplication)
+        var nonMutedRecipients = conversation.Participants
+            .Where(p => p.UserId != userId && !p.IsMuted)
+            .Select(p => p.UserId)
+            .ToList();
+
+        var conversationTitle = conversation.Type == ConversationType.DirectMessage
+            ? $"{sender!.FirstName} {sender.LastName}"
+            : conversation.Title ?? conversation.ChannelName ?? "Conversation";
+
+        await _notificationService.SendToManyAsync(
+            recipientIds: nonMutedRecipients,
+            actorId: userId,
+            type: NotificationType.NewMessage,
+            title: $"New message in {conversationTitle}",
+            message: request.Content.Length > 100 ? request.Content[..100] + "..." : request.Content,
+            entityType: "Conversation",
+            entityId: conversationId,
+            ct: ct);
+
+        // Detect @mentions — look for @firstName or @firstName lastName patterns
+        await DetectAndNotifyMentionsAsync(userId, sender!, conversationId, conversationTitle, request.Content, conversation.Participants.ToList(), ct);
+
         return Result.Success(response);
     }
 
@@ -811,5 +836,81 @@ public class MessagingService(
             lastMessageResponse,
             participants
         );
+    }
+
+    /// <summary>
+    /// Detects @mentions in message content and sends MentionedInMessage notifications.
+    /// Supports patterns: @FirstName or @FirstName.LastName (case-insensitive).
+    /// </summary>
+    private async Task DetectAndNotifyMentionsAsync(
+        string senderId,
+        ApplicationUser sender,
+        string conversationId,
+        string conversationTitle,
+        string content,
+        List<ConversationParticipant> participants,
+        CancellationToken ct)
+    {
+        if (!content.Contains('@')) return;
+
+        // Extract all @mentions from the message
+        var mentionPattern = new System.Text.RegularExpressions.Regex(@"@(\w+(?:\.\w+)?)");
+        var matches = mentionPattern.Matches(content);
+
+        if (matches.Count == 0) return;
+
+        var mentionedNames = matches
+            .Select(m => m.Groups[1].Value.ToLowerInvariant())
+            .Distinct()
+            .ToList();
+
+        // Resolve participant users
+        var participantUserIds = participants
+            .Where(p => p.UserId != senderId)
+            .Select(p => p.UserId)
+            .ToList();
+
+        var users = await _context.Users
+            .Where(u => participantUserIds.Contains(u.Id))
+            .ToListAsync(ct);
+
+        foreach (var user in users)
+        {
+            var firstName = user.FirstName.ToLowerInvariant();
+            var fullName = $"{user.FirstName}.{user.LastName}".ToLowerInvariant();
+
+            var isMentioned = mentionedNames.Any(m => m == firstName || m == fullName);
+            if (!isMentioned) continue;
+
+            await _notificationService.SendAsync(
+                recipientId: user.Id,
+                actorId: senderId,
+                type: NotificationType.MentionedInMessage,
+                title: $"You were mentioned in {conversationTitle}",
+                message: $"{sender.FirstName} {sender.LastName} mentioned you: \"{(content.Length > 80 ? content[..80] + "..." : content)}\"",
+                entityType: "Conversation",
+                entityId: conversationId,
+                priority: NotificationPriority.High,
+                ct: ct);
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    //  MUTE / UNMUTE
+    // ═══════════════════════════════════════════════════════════════
+
+    public async Task<Result> ToggleMuteAsync(
+        string userId, string conversationId, bool mute, CancellationToken ct = default)
+    {
+        var participant = await _context.ConversationParticipants
+            .FirstOrDefaultAsync(cp => cp.ConversationId == conversationId && cp.UserId == userId, ct);
+
+        if (participant is null)
+            return Result.Failure(MessagingErrors.NotAParticipant);
+
+        participant.IsMuted = mute;
+        await _context.SaveChangesAsync(ct);
+
+        return Result.Success();
     }
 }

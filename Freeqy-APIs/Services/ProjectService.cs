@@ -1,4 +1,4 @@
-﻿using Freeqy_APIs.Abstractions;
+using Freeqy_APIs.Abstractions;
 using Freeqy_APIs.Contracts.Category;
 using Freeqy_APIs.Contracts.Projects;
 using Freeqy_APIs.Contracts.Technology;
@@ -13,12 +13,14 @@ public class ProjectService(
     ApplicationDbContext dbContext,
     UserManager<ApplicationUser> userManager,
     IHubContext<ChatHub, IChatClient> hubContext,
-    IProjectHistoryService historyService) : IProjectService
+    IProjectHistoryService historyService,
+    INotificationService notificationService) : IProjectService
 {
     private readonly ApplicationDbContext _dbContext = dbContext;
     private readonly UserManager<ApplicationUser> _userManager = userManager;
     private readonly IHubContext<ChatHub, IChatClient> _hubContext = hubContext;
     private readonly IProjectHistoryService _historyService = historyService;
+    private readonly INotificationService _notificationService = notificationService;
 
     public async Task<Result<PaginatedList<ProjectListItemResponse>>> GetProjectsAsync(
         ProjectRequestFilter filter,
@@ -91,6 +93,22 @@ public class ProjectService(
         {
             project.Status = request.ProjectStatus;
             await _dbContext.SaveChangesAsync(cancellationToken);
+
+            // Notify all project members about the status change
+            var memberIds = await _dbContext.ProjectMembers
+                .Where(pm => pm.ProjectId == id && pm.IsActive)
+                .Select(pm => pm.UserId)
+                .ToListAsync(cancellationToken);
+
+            await _notificationService.SendToManyAsync(
+                recipientIds: memberIds,
+                actorId: userId,
+                type: NotificationType.ProjectStatusChanged,
+                title: "Project Status Updated",
+                message: $"Project \"{project.Name}\" status changed to {request.ProjectStatus}",
+                entityType: "Project",
+                entityId: project.Id,
+                ct: cancellationToken);
 
             if (request.ProjectStatus == ProjectStatus.Completed)
             {
@@ -481,6 +499,18 @@ public class ProjectService(
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
+        // Notify the removed member
+        await _notificationService.SendAsync(
+            recipientId: memberId,
+            actorId: userId,
+            type: NotificationType.MemberRemoved,
+            title: "Removed from Project",
+            message: $"You were removed from project \"{project.Name}\"",
+            entityType: "Project",
+            entityId: projectId,
+            priority: NotificationPriority.High,
+            ct: cancellationToken);
+
         await _historyService.RecordEventAsync(
             memberId,
             projectId,
@@ -544,6 +574,17 @@ public class ProjectService(
 
         projectMember.Role = request.Role;
         await _dbContext.SaveChangesAsync(cancellationToken);
+
+        // Notify the member about their role change
+        await _notificationService.SendAsync(
+            recipientId: memberId,
+            actorId: userId,
+            type: NotificationType.MemberRoleChanged,
+            title: "Role Updated",
+            message: $"Your role in project \"{project.Name}\" has been changed to {request.Role}",
+            entityType: "Project",
+            entityId: projectId,
+            ct: cancellationToken);
 
         await _historyService.RecordEventAsync(
             memberId,

@@ -4,9 +4,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Freeqy_APIs.Services;
 
-public class BadgeService(ApplicationDbContext context) : IBadgeService
+public class BadgeService(ApplicationDbContext context, INotificationService notificationService) : IBadgeService
 {
     private readonly ApplicationDbContext _context = context;
+    private readonly INotificationService _notificationService = notificationService;
 
     public async Task<Result<IEnumerable<BadgeResponse>>> GetUserBadgesAsync(string userId, CancellationToken cancellationToken = default)
     {
@@ -100,6 +101,25 @@ public class BadgeService(ApplicationDbContext context) : IBadgeService
         {
             _context.UserBadges.AddRange(toAssign);
             await _context.SaveChangesAsync(cancellationToken);
+
+            // Notify user about each earned badge
+            foreach (var ub in toAssign)
+            {
+                var badge = await _context.Badges.FindAsync([ub.BadgeId], cancellationToken);
+                if (badge is not null)
+                {
+                    await _notificationService.SendAsync(
+                        recipientId: userId,
+                        actorId: null,
+                        type: NotificationType.BadgeEarned,
+                        title: "Badge Earned! 🏆",
+                        message: $"Congratulations! You earned the \"{badge.Name}\" badge — {badge.Description}",
+                        entityType: "Badge",
+                        entityId: badge.Id.ToString(),
+                        priority: NotificationPriority.High,
+                        ct: cancellationToken);
+                }
+            }
         }
     }
 

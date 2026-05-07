@@ -1,4 +1,4 @@
-﻿namespace Freeqy_APIs.Persistancec.EntitiesConfigurations;
+namespace Freeqy_APIs.Persistancec.EntitiesConfigurations;
 
 public class UserConfiguration : IEntityTypeConfiguration<ApplicationUser>
 {
@@ -9,9 +9,7 @@ public class UserConfiguration : IEntityTypeConfiguration<ApplicationUser>
             .ToTable("RefreshTokens")
             .WithOwner()
             .HasForeignKey("UserId");
-        
-        builder.Property(u => u.Id)
-            .HasMaxLength(100);
+
         builder.Property(x => x.FirstName).HasMaxLength(100);
         builder.Property(x => x.LastName).HasMaxLength(100);
     }

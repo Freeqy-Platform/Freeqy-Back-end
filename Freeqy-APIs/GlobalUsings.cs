@@ -1,4 +1,4 @@
-﻿global using Microsoft.AspNetCore.Identity;
+global using Microsoft.AspNetCore.Identity;
 global using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 global using Microsoft.EntityFrameworkCore;
 global using Freeqy_APIs.Entities;
@@ -32,3 +32,4 @@ global using Freeqy_APIs.Contracts.Skills;
 global using Freeqy_APIs.Contracts.Tracks;
 global using Freeqy_APIs.Contracts.AiAnalysis;
 global using Freeqy_APIs.Contracts.Messaging;
+global using Freeqy_APIs.Contracts.Notifications;
