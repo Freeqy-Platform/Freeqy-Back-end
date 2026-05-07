@@ -14,6 +14,16 @@ public static class MeetingErrors
     public static readonly Error Unauthorized =
         new("Meeting.Unauthorized", "You are not authorized to perform this action", StatusCodes.Status403Forbidden);
 
-    public static readonly Error MeetingAlreadyDeleted =
-        new("Meeting.AlreadyDeleted", "Meeting is already deleted", StatusCodes.Status400BadRequest);
+    public static readonly Error InvalidMeetingType =
+        new("Meeting.InvalidType", "Invalid meeting type", StatusCodes.Status400BadRequest);
+
+    public static readonly Error LocationRequiredForOfflineMeeting =
+        new("Meeting.LocationRequired", "Location is required for offline meetings", StatusCodes.Status400BadRequest);
+
+    public static readonly Error CannotDeleteMeetingNotCreatedByUser =
+        new("Meeting.CannotDelete", "Only the user who created the meeting can delete it", StatusCodes.Status403Forbidden);
+
+    public static readonly Error CannotUpdateMeetingNotCreatedByUser =
+        new("Meeting.CannotUpdate", "Only the user who created the meeting can update it", StatusCodes.Status403Forbidden);
 }
+
