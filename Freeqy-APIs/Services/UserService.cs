@@ -1,8 +1,5 @@
-﻿using Freeqy_APIs.Contracts.Badges;
-using Freeqy_APIs.Contracts.Tracks;
+using Freeqy_APIs.Contracts.Badges;
 using Microsoft.AspNetCore.Identity.UI.Services;
-using Microsoft.EntityFrameworkCore;
-using System.Linq;
 
 namespace Freeqy_APIs.Services;
 
@@ -1682,4 +1679,165 @@ public class UserService(
 	}
 
 	#endregion
+
+	public async Task<Result<UserProfileResponse>> CreateUserAsync(CreateUserRequest request, CancellationToken cancellationToken = default)
+	{
+		var emailExists = await _userManager.Users
+			.AnyAsync(u => u.Email == request.Email.Trim(), cancellationToken);
+
+		if (emailExists)
+			return Result.Failure<UserProfileResponse>(UserErrors.DuplicateEmail);
+
+		var usernameExists = await _userManager.Users
+			.AnyAsync(u => u.UserName == request.UserName.Trim(), cancellationToken);
+
+		if (usernameExists)
+			return Result.Failure<UserProfileResponse>(UserErrors.DuplicateUsername);
+
+		var user = new ApplicationUser
+		{
+			FirstName = request.FirstName.Trim(),
+			LastName = request.LastName.Trim(),
+			Email = request.Email.Trim(),
+			UserName = request.UserName.Trim(),
+			PhoneNumber = request.PhoneNumber?.Trim(),
+			TrackId = request.TrackId,
+			EmailConfirmed  = true  // admin-created accounts skip email confirmation
+		};
+
+		var createResult = await _userManager.CreateAsync(user, request.Password);
+
+		if (!createResult.Succeeded)
+		{
+			var error = createResult.Errors.First();
+			return Result.Failure<UserProfileResponse>(new Error(error.Code, error.Description, StatusCodes.Status400BadRequest));
+		}
+
+		if (!string.IsNullOrWhiteSpace(request.RoleId))
+		{
+			var roleResult = await _userManager.AddToRoleAsync(user, request.RoleId.Trim());
+			if (!roleResult.Succeeded)
+			{
+				_logger.LogWarning("Role '{Role}' could not be assigned to user {UserId}: {Errors}",
+					request.RoleId, user.Id,
+					string.Join(", ", roleResult.Errors.Select(e => e.Description)));
+			}
+		}
+
+		var createdUser = await _userManager.Users
+			.Where(u => u.Id == user.Id)
+			.Include(u => u.Certificates)
+			.Include(u => u.Educations)
+			.Include(u => u.SocialMediaLinks)
+			.Include(u => u.Skills).ThenInclude(us => us.Skill)
+			.Include(u => u.Track)
+			.Include(u => u.UserBadges).ThenInclude(ub => ub.Badge)
+			.SingleAsync(cancellationToken);
+
+		_logger.LogInformation("Admin created user {UserId} ({Email})", user.Id, user.Email);
+
+		return Result.Success(BuildUserProfileResponse(createdUser));
+	}
+
+	public async Task<Result> DeleteUserAsync(string adminId, string targetUserId, CancellationToken cancellationToken = default)
+	{
+		if (adminId == targetUserId)
+			return Result.Failure(UserErrors.UserCannotDeleteSelf);
+
+		var user = await _userManager.FindByIdAsync(targetUserId);
+
+		if (user is null)
+			return Result.Failure(UserErrors.UserNotFound);
+
+		if (!string.IsNullOrEmpty(user.PhotoUrl))
+		{
+			var photoPath = Path.Combine(_environment.WebRootPath, user.PhotoUrl.TrimStart('/'));
+			if (File.Exists(photoPath))
+				File.Delete(photoPath);
+		}
+
+		if (!string.IsNullOrEmpty(user.BannerPhotoUrl))
+		{
+			var bannerPath = Path.Combine(_environment.WebRootPath, user.BannerPhotoUrl.TrimStart('/'));
+			if (File.Exists(bannerPath))
+				File.Delete(bannerPath);
+		}
+
+		var deleteResult = await _userManager.DeleteAsync(user);
+
+		if (!deleteResult.Succeeded)
+		{
+			var error = deleteResult.Errors.FirstOrDefault();
+			_logger.LogError("Failed to delete user {UserId}: {Error}", targetUserId, error?.Description);
+
+			return error is null
+				? Result.Failure(UserErrors.UserDeleteFailed)
+				: Result.Failure(new Error(error.Code, error.Description, StatusCodes.Status500InternalServerError));
+		}
+
+		_logger.LogInformation("Admin {AdminId} deleted user {UserId}", adminId, targetUserId);
+
+		return Result.Success();
+	}
+
+	public async Task<Result> BlockUserAsync(string adminId, string targetUserId, BlockUserRequest request, CancellationToken cancellationToken = default)
+	{
+		if (adminId == targetUserId)
+			return Result.Failure(UserErrors.UserCannotBlockSelf);
+
+		if (await _userManager.FindByIdAsync(targetUserId) is not { } user)
+			return Result.Failure(UserErrors.UserNotFound);
+
+		if (user.LockoutEnd.HasValue && user.LockoutEnd > DateTimeOffset.UtcNow)
+			return Result.Failure(UserErrors.UserAlreadyBlocked);
+
+		await _userManager.SetLockoutEnabledAsync(user, true);
+		var lockoutResult = await _userManager.SetLockoutEndDateAsync(user, DateTimeOffset.MaxValue);   // maxValue 31/12/9999
+
+        if (!lockoutResult.Succeeded)
+		{
+			var error = lockoutResult.Errors.FirstOrDefault();
+			return error is null
+				? Result.Failure(UserErrors.UserBlockFailed)
+				: Result.Failure(new Error(error.Code, error.Description, StatusCodes.Status500InternalServerError));
+		}
+
+		user.BlockReason = request.Reason;
+		user.BlockedAt   = DateTime.UtcNow;
+		await _userManager.UpdateAsync(user);
+
+		_logger.LogInformation("Admin {AdminId} blocked user {UserId}. Reason: {Reason}", adminId, targetUserId, request.Reason);
+
+		return Result.Success();
+	}
+
+	public async Task<Result> UnblockUserAsync(string adminId, string targetUserId, CancellationToken cancellationToken = default)
+	{
+		if (adminId == targetUserId)
+			return Result.Failure(UserErrors.UserCannotBlockSelf);
+
+        if (await _userManager.FindByIdAsync(targetUserId) is not { } user)
+            return Result.Failure(UserErrors.UserNotFound);
+
+        if (!user.LockoutEnd.HasValue || user.LockoutEnd <= DateTimeOffset.UtcNow)
+			return Result.Failure(UserErrors.UserNotBlocked);
+
+		var lockoutResult = await _userManager.SetLockoutEndDateAsync(user, null);
+
+		if (!lockoutResult.Succeeded)
+		{
+			var error = lockoutResult.Errors.FirstOrDefault();
+			return error is null
+				? Result.Failure(UserErrors.UserBlockFailed)
+				: Result.Failure(new Error(error.Code, error.Description, StatusCodes.Status500InternalServerError));
+		}
+
+		user.BlockReason = null;
+		user.BlockedAt   = null;
+		await _userManager.UpdateAsync(user);
+
+		_logger.LogInformation("Admin {AdminId} unblocked user {UserId}", adminId, targetUserId);
+
+		return Result.Success();
+	}
 }

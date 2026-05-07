@@ -1,4 +1,4 @@
-﻿using System.Security.Cryptography;
+using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using Freeqy_APIs.Helper;
 using Microsoft.AspNetCore.Identity.UI.Services;
@@ -97,6 +97,7 @@ public class AuthService(UserManager<ApplicationUser> userManager, IJwtProvider 
                 };
 
                 await _userManager.CreateAsync(user);
+                await _userManager.AddToRoleAsync(user, DefaultRoles.User);
             }
             
             await _userManager.AddLoginAsync(user, info);
@@ -281,6 +282,9 @@ public class AuthService(UserManager<ApplicationUser> userManager, IJwtProvider 
 
         if (result.Succeeded)
         {
+            // Always assign the default User role
+            await _userManager.AddToRoleAsync(user, DefaultRoles.User);
+
             var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);    
             code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
 

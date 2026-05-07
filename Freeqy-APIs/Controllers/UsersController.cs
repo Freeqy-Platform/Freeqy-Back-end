@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Freeqy_APIs.Controllers;
 
@@ -644,10 +644,42 @@ public class UsersController(IUserService userService) : ControllerBase
 		var result = await _userService.ConfirmEmailChangeAsync(userId, token, cancellationToken);
 
 		if (result.IsSuccess)
-		{
 			return Ok(new { message = "Email confirmed successfully! You can now login with your new email." });
-		}
 
 		return result.ToProblem();
+	}
+
+	[HttpPost("")]
+	[Authorize(Roles = "Admin")]
+	public async Task<IActionResult> CreateUser([FromBody] CreateUserRequest request, CancellationToken cancellationToken)
+	{
+		var result = await _userService.CreateUserAsync(request, cancellationToken);
+		return result.IsSuccess
+			? CreatedAtAction(nameof(GetUserById), new { id = result.Value!.Id }, result.Value)
+			: result.ToProblem();
+	}
+
+	[HttpDelete("{id}")]
+	[Authorize(Roles = "Admin")]
+	public async Task<IActionResult> DeleteUser(string id, CancellationToken cancellationToken)
+	{
+		var result = await _userService.DeleteUserAsync(User.GetUserId()!, id, cancellationToken);
+		return result.IsSuccess ? NoContent() : result.ToProblem();
+	}
+
+	[HttpPost("{id}/block")]
+	[Authorize(Roles = "Admin")]
+	public async Task<IActionResult> BlockUser(string id, [FromBody] BlockUserRequest request, CancellationToken cancellationToken)
+	{
+		var result = await _userService.BlockUserAsync(User.GetUserId()!, id, request, cancellationToken);
+		return result.IsSuccess ? NoContent() : result.ToProblem();
+	}
+
+	[HttpPost("{id}/unblock")]
+	[Authorize(Roles = "Admin")]
+	public async Task<IActionResult> UnblockUser(string id, CancellationToken cancellationToken)
+	{
+		var result = await _userService.UnblockUserAsync(User.GetUserId()!, id, cancellationToken);
+		return result.IsSuccess ? NoContent() : result.ToProblem();
 	}
 }

@@ -1,4 +1,4 @@
-﻿using Freeqy_APIs.Abstractions;
+using Freeqy_APIs.Abstractions;
 using Freeqy_APIs.Contracts.Category;
 using Freeqy_APIs.Contracts.Projects;
 using Freeqy_APIs.Contracts.Technology;
@@ -314,7 +314,8 @@ public class ProjectService(
         project.UpdatedAt = DateTime.UtcNow;
         project.Status = request.Status;
         project.Visibility = request.Visibility;
-        project.EstimatedTime = request.EstimatedTime;
+        project.StartDate = request.StartDate;
+        project.EndDate = request.EndDate;
 
         project.Technologies.Clear();
         project.Technologies = technologies;

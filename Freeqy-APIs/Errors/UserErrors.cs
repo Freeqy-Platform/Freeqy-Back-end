@@ -1,4 +1,4 @@
-﻿namespace Freeqy_APIs.Errors;
+namespace Freeqy_APIs.Errors;
 
 public class UserErrors
 {
@@ -89,4 +89,23 @@ public class UserErrors
     
     public static readonly Error DuplicateTrackRequest =
         new("TrackRequest.Duplicate", "A pending request for this track already exists", StatusCodes.Status409Conflict);
+
+    // Admin User Management Errors
+    public static readonly Error UserDeleteFailed =
+        new("User.DeleteFailed", "Failed to delete the user account", StatusCodes.Status500InternalServerError);
+
+    public static readonly Error UserCannotDeleteSelf =
+        new("User.CannotDeleteSelf", "Administrators cannot delete their own account through this endpoint", StatusCodes.Status400BadRequest);
+
+    public static readonly Error UserCannotBlockSelf =
+        new("User.CannotBlockSelf", "Administrators cannot block their own account", StatusCodes.Status400BadRequest);
+
+    public static readonly Error UserAlreadyBlocked =
+        new("User.AlreadyBlocked", "This user is already blocked", StatusCodes.Status409Conflict);
+
+    public static readonly Error UserNotBlocked =
+        new("User.NotBlocked", "This user is not currently blocked", StatusCodes.Status400BadRequest);
+
+    public static readonly Error UserBlockFailed =
+        new("User.BlockFailed", "Failed to update the user block status", StatusCodes.Status500InternalServerError);
 }
