@@ -23,6 +23,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Badge> Badges { get; set; }
     public DbSet<UserBadge> UserBadges { get; set; }
     public DbSet<UserProjectHistory> UserProjectHistories { get; set; }
+    public DbSet<Meeting> Meetings { get; set; }
     public DbSet<Notification> Notifications { get; set; }
     public DbSet<NotificationPreference> NotificationPreferences { get; set; }
 

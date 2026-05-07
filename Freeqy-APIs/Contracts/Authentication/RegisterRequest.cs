@@ -1,4 +1,4 @@
-﻿namespace Freeqy_APIs.Contracts.Authentication;
+namespace Freeqy_APIs.Contracts.Authentication;
 
 public record RegisterRequest(
     string Email,

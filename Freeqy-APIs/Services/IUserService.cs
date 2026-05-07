@@ -1,4 +1,4 @@
-﻿using Freeqy_APIs.Contracts.Tracks;
+using Freeqy_APIs.Contracts.Tracks;
 
 namespace Freeqy_APIs.Services;
 
@@ -38,4 +38,12 @@ public interface IUserService
 	Task<Result<UserProfileResponse>> UpdateEmailAsync(string userId, UpdateEmailRequest request, CancellationToken cancellation = default);
 	Task<Result> UpdatePasswordAsync(string userId, UpdatePasswordRequest request, CancellationToken cancellationToken = default);
 	Task<Result> ConfirmEmailChangeAsync(string userId, string token, CancellationToken cancellationToken = default);
+
+	// Admin CRUD
+	Task<Result<UserProfileResponse>> CreateUserAsync(CreateUserRequest request, CancellationToken cancellationToken = default);
+	Task<Result> DeleteUserAsync(string adminId, string targetUserId, CancellationToken cancellationToken = default);
+
+	// Admin Block / Unblock
+	Task<Result> BlockUserAsync(string adminId, string targetUserId, BlockUserRequest request, CancellationToken cancellationToken = default);
+	Task<Result> UnblockUserAsync(string adminId, string targetUserId, CancellationToken cancellationToken = default);
 }

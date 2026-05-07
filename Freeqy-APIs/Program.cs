@@ -33,7 +33,19 @@ if (Environment.GetEnvironmentVariable("RUN_MIGRATIONS_ON_STARTUP") == "true")
         logger.LogError(ex, "An error occurred while migrating the database.");
     }
 }
-// =========================================================== 
+
+// Roles seeding
+using (var scope = app.Services.CreateScope())
+{
+    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+    foreach (var roleName in DefaultRoles.All)
+    {
+        if (!await roleManager.RoleExistsAsync(roleName))
+        {
+            await roleManager.CreateAsync(new IdentityRole(roleName));
+        }
+    }
+}
 
 app.UseHttpsRedirection();
 
