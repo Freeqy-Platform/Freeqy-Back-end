@@ -14,7 +14,6 @@ public class MeetingConfiguration : IEntityTypeConfiguration<Meeting>
             .HasMaxLength(100);
 
         builder.Property(m => m.ProjectId)
-            .HasMaxLength(100)
             .IsRequired();
 
         builder.Property(m => m.Title)
