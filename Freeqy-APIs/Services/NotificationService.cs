@@ -10,13 +10,15 @@ public class NotificationService(
     UserManager<ApplicationUser> userManager,
     IHubContext<ChatHub, IChatClient> hubContext,
     IEmailSender emailSender,
-    ILogger<NotificationService> logger) : INotificationService
+    ILogger<NotificationService> logger,
+    IHttpContextAccessor httpContextAccessor) : INotificationService
 {
     private readonly ApplicationDbContext _dbContext = dbContext;
     private readonly UserManager<ApplicationUser> _userManager = userManager;
     private readonly IHubContext<ChatHub, IChatClient> _hubContext = hubContext;
     private readonly IEmailSender _emailSender = emailSender;
     private readonly ILogger<NotificationService> _logger = logger;
+    private readonly IHttpContextAccessor _httpContextAccessor = httpContextAccessor;
 
     // Notification types that trigger email by default
     private static readonly HashSet<NotificationType> EmailDefaultTypes =
@@ -345,7 +347,7 @@ public class NotificationService(
         }
     }
 
-    private static NotificationResponse MapToResponse(Notification n, ApplicationUser? actor)
+    private NotificationResponse MapToResponse(Notification n, ApplicationUser? actor)
     {
         return new NotificationResponse(
             Id: n.Id,
@@ -355,7 +357,7 @@ public class NotificationService(
             Message: n.Message,
             ActorId: n.ActorId,
             ActorName: actor is not null ? $"{actor.FirstName} {actor.LastName}" : null,
-            ActorPhotoUrl: actor?.PhotoUrl,
+            ActorPhotoUrl: BuildFullPhotoUrl(actor?.PhotoUrl),
             EntityType: n.EntityType,
             EntityId: n.EntityId,
             ActionUrl: n.ActionUrl,
@@ -363,5 +365,20 @@ public class NotificationService(
             CreatedAt: n.CreatedAt,
             ReadAt: n.ReadAt
         );
+    }
+
+    /// <summary>
+    /// Converts a relative photo URL to a full URL by prepending the current request's scheme and host.
+    /// </summary>
+    private string? BuildFullPhotoUrl(string? photoUrl)
+    {
+        if (string.IsNullOrEmpty(photoUrl)) return photoUrl;
+        var request = _httpContextAccessor.HttpContext?.Request;
+        if (request is not null)
+        {
+            var baseUrl = $"{request.Scheme}://{request.Host}";
+            return $"{baseUrl}{photoUrl}";
+        }
+        return photoUrl;
     }
 }

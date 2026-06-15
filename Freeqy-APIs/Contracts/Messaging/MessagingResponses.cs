@@ -10,6 +10,7 @@ public record ConversationResponse(
     DateTime CreatedAt,
     DateTime? LastMessageAt,
     int UnreadCount,
+    DateTime? LastReadAt,
     MessageResponse? LastMessage,
     List<ParticipantResponse> Participants
 );

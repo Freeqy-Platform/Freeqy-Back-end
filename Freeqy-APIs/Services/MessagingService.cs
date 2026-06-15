@@ -8,12 +8,14 @@ public class MessagingService(
     ApplicationDbContext context,
     UserManager<ApplicationUser> userManager,
     IHubContext<ChatHub, IChatClient> hubContext,
-    INotificationService notificationService) : IMessagingService
+    INotificationService notificationService,
+    IHttpContextAccessor httpContextAccessor) : IMessagingService
 {
     private readonly ApplicationDbContext _context = context;
     private readonly UserManager<ApplicationUser> _userManager = userManager;
     private readonly IHubContext<ChatHub, IChatClient> _hubContext = hubContext;
     private readonly INotificationService _notificationService = notificationService;
+    private readonly IHttpContextAccessor _httpContextAccessor = httpContextAccessor;
 
     private const int MaxChannelsPerProject = 5;
 
@@ -578,7 +580,7 @@ public class MessagingService(
             message.Id,
             userId,
             $"{sender!.FirstName} {sender.LastName}",
-            sender.PhotoUrl,
+            BuildFullPhotoUrl(sender.PhotoUrl),
             message.Content,
             message.Type.ToString(),
             message.CreatedAt,
@@ -643,22 +645,24 @@ public class MessagingService(
         var messages = await query
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .Select(m => new MessageResponse(
+            .ToListAsync(ct);
+
+        var messageResponses = messages.Select(m => new MessageResponse(
                 m.Id,
                 m.SenderId,
                 m.Sender.FirstName + " " + m.Sender.LastName,
-                m.Sender.PhotoUrl,
+                BuildFullPhotoUrl(m.Sender.PhotoUrl),
                 m.IsDeleted ? "" : m.Content,
                 m.Type.ToString(),
                 m.CreatedAt,
                 m.EditedAt,
                 m.IsDeleted
             ))
-            .ToListAsync(ct);
+            .ToList();
 
         var hasMore = (page * pageSize) < totalCount;
 
-        return Result.Success(new MessageListResponse(messages, totalCount, page, pageSize, hasMore));
+        return Result.Success(new MessageListResponse(messageResponses, totalCount, page, pageSize, hasMore));
     }
 
     public async Task<Result<MessageResponse>> EditMessageAsync(
@@ -686,7 +690,7 @@ public class MessagingService(
             message.Id,
             message.SenderId,
             $"{message.Sender.FirstName} {message.Sender.LastName}",
-            message.Sender.PhotoUrl,
+            BuildFullPhotoUrl(message.Sender.PhotoUrl),
             message.Content,
             message.Type.ToString(),
             message.CreatedAt,
@@ -807,7 +811,7 @@ public class MessagingService(
                 lastMsg.Id,
                 lastMsg.SenderId,
                 $"{lastMsg.Sender.FirstName} {lastMsg.Sender.LastName}",
-                lastMsg.Sender.PhotoUrl,
+                BuildFullPhotoUrl(lastMsg.Sender.PhotoUrl),
                 lastMsg.IsDeleted ? "" : lastMsg.Content,
                 lastMsg.Type.ToString(),
                 lastMsg.CreatedAt,
@@ -819,23 +823,51 @@ public class MessagingService(
         var participants = conversation.Participants.Select(p => new ParticipantResponse(
             p.UserId,
             $"{p.User.FirstName} {p.User.LastName}",
-            p.User.PhotoUrl,
+            BuildFullPhotoUrl(p.User.PhotoUrl),
             p.Role.ToString()
         )).ToList();
+
+        // For DM conversations, use the other person's name as the title
+        var title = conversation.Title;
+        if (conversation.Type == ConversationType.DirectMessage)
+        {
+            var otherParticipant = conversation.Participants.FirstOrDefault(p => p.UserId != currentUserId);
+            if (otherParticipant is not null)
+            {
+                title = $"{otherParticipant.User.FirstName} {otherParticipant.User.LastName}";
+            }
+        }
 
         return new ConversationResponse(
             conversation.Id,
             conversation.Type.ToString(),
-            conversation.Title,
+            title,
             conversation.ChannelName,
             conversation.ProjectId,
             conversation.Project?.Name,
             conversation.CreatedAt,
             conversation.LastMessageAt,
             unreadCount,
+            participant?.LastReadAt,
             lastMessageResponse,
             participants
         );
+    }
+
+    /// <summary>
+    /// Converts a relative photo URL (e.g. /uploads/profile-photos/xxx.jpg) to a full URL
+    /// by prepending the current request's scheme and host.
+    /// </summary>
+    private string? BuildFullPhotoUrl(string? photoUrl)
+    {
+        if (string.IsNullOrEmpty(photoUrl)) return photoUrl;
+        var request = _httpContextAccessor.HttpContext?.Request;
+        if (request is not null)
+        {
+            var baseUrl = $"{request.Scheme}://{request.Host}";
+            return $"{baseUrl}{photoUrl}";
+        }
+        return photoUrl;
     }
 
     /// <summary>
