@@ -53,8 +53,8 @@ app.UseHttpsRedirection();
 app.MapStaticAssets();
 
 // Add Rate Limiting Middleware (before Authentication)
-app.UseRateLimiter();
 app.UseCors();
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 
