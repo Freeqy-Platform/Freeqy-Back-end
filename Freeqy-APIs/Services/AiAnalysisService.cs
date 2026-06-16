@@ -24,4 +24,16 @@ public class AiAnalysisService(IAiServices aiServices, ILogger<AiAnalysisService
 		var result = await _aiServices.GenerateFullAnalysisAsync(projectIdea);
 		return result;
 	}
+
+	public async Task<AnalyzeProjectResponse> AnalyzeProject(ProjectTargetRequest request)
+	{
+		var result = await _aiServices.AnalyzeProjectAsync(request);
+		return result;
+	}
+
+	public async Task<EvaluateAnswersResponse> EvaluateAnswers(List<QuestionAnswerDto> request)
+	{
+		var result = await _aiServices.EvaluateAnswersAsync(request);
+		return result;
+	}
 }
