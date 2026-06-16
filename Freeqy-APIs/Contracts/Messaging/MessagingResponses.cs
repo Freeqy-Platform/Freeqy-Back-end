@@ -44,7 +44,10 @@ public record ReadReceiptResponse(
 
 public record ConversationListResponse(
     List<ConversationResponse> Conversations,
-    int TotalCount
+    int TotalCount,
+    int Page,
+    int PageSize,
+    bool HasMore
 );
 
 public record MessageListResponse(

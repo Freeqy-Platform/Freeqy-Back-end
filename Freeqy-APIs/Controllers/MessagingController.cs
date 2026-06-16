@@ -31,11 +31,12 @@ public class MessagingController(IMessagingService messagingService) : Controlle
         return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
     }
 
-    /// <summary>Get all conversations for the current user.</summary>
+    /// <summary>Get paginated conversations for the current user.</summary>
     [HttpGet("conversations")]
-    public async Task<IActionResult> GetMyConversations(CancellationToken ct)
+    public async Task<IActionResult> GetMyConversations(
+        [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
     {
-        var result = await _messagingService.GetUserConversationsAsync(User.GetUserId()!, ct);
+        var result = await _messagingService.GetUserConversationsAsync(User.GetUserId()!, page, pageSize, ct);
         return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
     }
 

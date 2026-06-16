@@ -12,7 +12,7 @@ public interface IMessagingService
         string userId, StartTeamConversationRequest request, CancellationToken ct = default);
 
     Task<Result<ConversationListResponse>> GetUserConversationsAsync(
-        string userId, CancellationToken ct = default);
+        string userId, int page = 1, int pageSize = 20, CancellationToken ct = default);
 
     Task<Result<ConversationResponse>> GetConversationAsync(
         string userId, string conversationId, CancellationToken ct = default);

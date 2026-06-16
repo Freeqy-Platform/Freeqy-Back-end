@@ -155,13 +155,19 @@ public class MessagingService(
     }
 
     public async Task<Result<ConversationListResponse>> GetUserConversationsAsync(
-        string userId, CancellationToken ct = default)
+        string userId, int page = 1, int pageSize = 20, CancellationToken ct = default)
     {
-        var conversations = await _context.Conversations
+        var baseQuery = _context.Conversations
             .Include(c => c.Participants).ThenInclude(p => p.User)
             .Include(c => c.Project)
-            .Where(c => c.Participants.Any(p => p.UserId == userId))
+            .Where(c => c.Participants.Any(p => p.UserId == userId));
+
+        var totalCount = await baseQuery.CountAsync(ct);
+
+        var conversations = await baseQuery
             .OrderByDescending(c => c.LastMessageAt ?? c.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync(ct);
 
         var responses = new List<ConversationResponse>();
@@ -170,7 +176,8 @@ public class MessagingService(
             responses.Add(await BuildConversationResponse(conv, userId, ct));
         }
 
-        return Result.Success(new ConversationListResponse(responses, responses.Count));
+        var hasMore = (page * pageSize) < totalCount;
+        return Result.Success(new ConversationListResponse(responses, totalCount, page, pageSize, hasMore));
     }
 
     public async Task<Result<ConversationResponse>> GetConversationAsync(
