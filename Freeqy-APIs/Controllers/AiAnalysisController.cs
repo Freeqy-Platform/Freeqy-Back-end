@@ -54,4 +54,26 @@ public class AiAnalysisController(IAiAnalysisService aiAnalysisService) : Contro
 
 		return Ok(result);
 	}
+
+	[HttpPost("project/analyze")]
+	[ProducesResponseType(typeof(AnalyzeProjectResponse), StatusCodes.Status200OK)]
+	[ProducesResponseType(StatusCodes.Status400BadRequest)]
+	public async Task<IActionResult> AnalyzeProject(
+		[FromBody] ProjectTargetRequest request,
+		CancellationToken cancellationToken)
+	{
+		var result = await _aiAnalysisService.AnalyzeProject(request);
+		return Ok(result);
+	}
+
+	[HttpPost("answers/evaluate")]
+	[ProducesResponseType(typeof(EvaluateAnswersResponse), StatusCodes.Status200OK)]
+	[ProducesResponseType(StatusCodes.Status400BadRequest)]
+	public async Task<IActionResult> EvaluateAnswers(
+		[FromBody] EvaluateAnswersRequest request,
+		CancellationToken cancellationToken)
+	{
+		var result = await _aiAnalysisService.EvaluateAnswers(request.QuestionsAndAnswers);
+		return Ok(result);
+	}
 }

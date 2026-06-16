@@ -17,4 +17,12 @@ public interface IAiServices
 	[Post("/analysis/full")]
 	Task<FullAnalysisResponse> GenerateFullAnalysisAsync(
 		[Body] ProjectIdea idea);
+
+	[Post("/project/analyze")]
+	Task<AnalyzeProjectResponse> AnalyzeProjectAsync(
+		[Body] ProjectTargetRequest request);
+
+	[Post("/answers/evaluate")]
+	Task<EvaluateAnswersResponse> EvaluateAnswersAsync(
+		[Body] List<QuestionAnswerDto> questionsAndAnswers);
 }
