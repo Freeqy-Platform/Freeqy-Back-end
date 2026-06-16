@@ -24,6 +24,9 @@ public interface IChatClient
     /// <summary>Called when a user reads a conversation (read receipt).</summary>
     Task ConversationRead(string conversationId, string userId);
 
+    /// <summary>Called when a user reads specific messages (per-message read receipt).</summary>
+    Task MessageRead(string conversationId, string messageId, string userId, DateTime readAt);
+
     /// <summary>Called when a user starts typing in a conversation.</summary>
     Task UserTyping(string conversationId, string userId, string userName);
 

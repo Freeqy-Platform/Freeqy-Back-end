@@ -80,3 +80,13 @@ public class EditMessageRequestValidator : AbstractValidator<EditMessageRequest>
             .MaximumLength(4000).WithMessage("Message must not exceed 4000 characters.");
     }
 }
+
+public class MarkMessagesAsReadRequestValidator : AbstractValidator<MarkMessagesAsReadRequest>
+{
+    public MarkMessagesAsReadRequestValidator()
+    {
+        RuleFor(x => x.MessageIds)
+            .NotEmpty().WithMessage("MessageIds is required.")
+            .Must(ids => ids.Count <= 200).WithMessage("Cannot mark more than 200 messages at once.");
+    }
+}

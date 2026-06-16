@@ -149,6 +149,23 @@ public class MessagingController(IMessagingService messagingService) : Controlle
         return result.IsSuccess ? Ok(new { message = "Conversation marked as read" }) : result.ToProblem();
     }
 
+    /// <summary>Mark specific messages as read (per-message read receipts).</summary>
+    [HttpPost("conversations/{conversationId}/messages/read")]
+    public async Task<IActionResult> MarkMessagesAsRead(
+        string conversationId, [FromBody] MarkMessagesAsReadRequest request, CancellationToken ct)
+    {
+        var result = await _messagingService.MarkMessagesAsReadAsync(User.GetUserId()!, conversationId, request, ct);
+        return result.IsSuccess ? Ok(new { message = "Messages marked as read" }) : result.ToProblem();
+    }
+
+    /// <summary>Get read receipts for a specific message.</summary>
+    [HttpGet("messages/{messageId}/read-receipts")]
+    public async Task<IActionResult> GetMessageReadReceipts(string messageId, CancellationToken ct)
+    {
+        var result = await _messagingService.GetMessageReadReceiptsAsync(User.GetUserId()!, messageId, ct);
+        return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
+    }
+
     // ── Mute / Unmute ────────────────────────────────────────────────
 
     /// <summary>Mute or unmute notifications for a conversation.</summary>

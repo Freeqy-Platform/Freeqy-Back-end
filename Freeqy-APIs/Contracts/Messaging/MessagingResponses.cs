@@ -31,7 +31,15 @@ public record MessageResponse(
     string Type,
     DateTime CreatedAt,
     DateTime? EditedAt,
-    bool IsDeleted
+    bool IsDeleted,
+    List<ReadReceiptResponse>? ReadReceipts = null
+);
+
+public record ReadReceiptResponse(
+    string UserId,
+    string UserName,
+    string? UserPhotoUrl,
+    DateTime ReadAt
 );
 
 public record ConversationListResponse(
@@ -52,4 +60,9 @@ public record ProjectChannelsResponse(
     List<ConversationResponse> Channels,
     int TotalChannels,
     int MaxChannels
+);
+
+public record MessageReadReceiptsResponse(
+    string MessageId,
+    List<ReadReceiptResponse> ReadReceipts
 );

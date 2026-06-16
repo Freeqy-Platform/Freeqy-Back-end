@@ -53,6 +53,13 @@ public interface IMessagingService
     Task<Result> MarkConversationAsReadAsync(
         string userId, string conversationId, CancellationToken ct = default);
 
+    // ── Per-Message Read Receipts ────────────────────────────────────
+    Task<Result> MarkMessagesAsReadAsync(
+        string userId, string conversationId, MarkMessagesAsReadRequest request, CancellationToken ct = default);
+
+    Task<Result<MessageReadReceiptsResponse>> GetMessageReadReceiptsAsync(
+        string userId, string messageId, CancellationToken ct = default);
+
     // ── Mute ────────────────────────────────────────────────────────
     Task<Result> ToggleMuteAsync(
         string userId, string conversationId, bool mute, CancellationToken ct = default);

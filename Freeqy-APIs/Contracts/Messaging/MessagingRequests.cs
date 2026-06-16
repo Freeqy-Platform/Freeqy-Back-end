@@ -13,3 +13,5 @@ public record AddChannelMembersRequest(List<string> UserIds);
 public record SendMessageRequest(string Content);
 
 public record EditMessageRequest(string Content);
+
+public record MarkMessagesAsReadRequest(List<string> MessageIds);

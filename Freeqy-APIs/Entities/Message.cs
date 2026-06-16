@@ -16,4 +16,6 @@ public class Message
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? EditedAt { get; set; }
     public bool IsDeleted { get; set; }
+
+    public ICollection<MessageReadReceipt> ReadReceipts { get; set; } = [];
 }

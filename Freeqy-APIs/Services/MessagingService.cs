@@ -539,7 +539,7 @@ public class MessagingService(
                 .ReceiveMessage(channelId, new MessageResponse(
                     systemMsg.Id, systemMsg.SenderId, "System", null,
                     systemMsg.Content, systemMsg.Type.ToString(),
-                    systemMsg.CreatedAt, null, false));
+                    systemMsg.CreatedAt, null, false, null));
         }
 
         return Result.Success();
@@ -585,7 +585,8 @@ public class MessagingService(
             message.Type.ToString(),
             message.CreatedAt,
             message.EditedAt,
-            message.IsDeleted
+            message.IsDeleted,
+            []
         );
 
         // Push to all participants via SignalR
@@ -637,6 +638,8 @@ public class MessagingService(
 
         var query = _context.Messages
             .Include(m => m.Sender)
+            .Include(m => m.ReadReceipts)
+                .ThenInclude(rr => rr.User)
             .Where(m => m.ConversationId == conversationId)
             .OrderByDescending(m => m.CreatedAt);
 
@@ -656,9 +659,57 @@ public class MessagingService(
                 m.Type.ToString(),
                 m.CreatedAt,
                 m.EditedAt,
-                m.IsDeleted
+                m.IsDeleted,
+                m.ReadReceipts.Select(rr => new ReadReceiptResponse(
+                    rr.UserId,
+                    $"{rr.User.FirstName} {rr.User.LastName}",
+                    BuildFullPhotoUrl(rr.User.PhotoUrl),
+                    rr.ReadAt
+                )).ToList()
             ))
             .ToList();
+
+        // Auto-mark: create read receipts for unread messages from other senders
+        var unreadMessages = messages
+            .Where(m => m.SenderId != userId && !m.ReadReceipts.Any(rr => rr.UserId == userId))
+            .ToList();
+
+        if (unreadMessages.Count > 0)
+        {
+            var now = DateTime.UtcNow;
+            foreach (var msg in unreadMessages)
+            {
+                _context.MessageReadReceipts.Add(new MessageReadReceipt
+                {
+                    MessageId = msg.Id,
+                    UserId = userId,
+                    ReadAt = now
+                });
+            }
+
+            // Also update conversation-level LastReadAt
+            var participant = await _context.ConversationParticipants
+                .FirstOrDefaultAsync(cp => cp.ConversationId == conversationId && cp.UserId == userId, ct);
+            if (participant is not null)
+                participant.LastReadAt = now;
+
+            await _context.SaveChangesAsync(ct);
+
+            // Notify other participants about read receipts via SignalR
+            var otherParticipantIds = await _context.ConversationParticipants
+                .Where(cp => cp.ConversationId == conversationId && cp.UserId != userId)
+                .Select(cp => cp.UserId)
+                .ToListAsync(ct);
+
+            foreach (var msg in unreadMessages)
+            {
+                foreach (var otherUserId in otherParticipantIds)
+                {
+                    await _hubContext.Clients.User(otherUserId)
+                        .MessageRead(conversationId, msg.Id, userId, now);
+                }
+            }
+        }
 
         var hasMore = (page * pageSize) < totalCount;
 
@@ -686,6 +737,17 @@ public class MessagingService(
         message.EditedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync(ct);
 
+        var readReceipts = await _context.MessageReadReceipts
+            .Include(rr => rr.User)
+            .Where(rr => rr.MessageId == messageId)
+            .Select(rr => new ReadReceiptResponse(
+                rr.UserId,
+                $"{rr.User.FirstName} {rr.User.LastName}",
+                BuildFullPhotoUrl(rr.User.PhotoUrl),
+                rr.ReadAt
+            ))
+            .ToListAsync(ct);
+
         var response = new MessageResponse(
             message.Id,
             message.SenderId,
@@ -695,7 +757,8 @@ public class MessagingService(
             message.Type.ToString(),
             message.CreatedAt,
             message.EditedAt,
-            message.IsDeleted
+            message.IsDeleted,
+            readReceipts
         );
 
         // Notify participants about the edit
@@ -778,6 +841,109 @@ public class MessagingService(
     }
 
     // ═══════════════════════════════════════════════════════════════
+    //  PER-MESSAGE READ RECEIPTS
+    // ═══════════════════════════════════════════════════════════════
+
+    public async Task<Result> MarkMessagesAsReadAsync(
+        string userId, string conversationId, MarkMessagesAsReadRequest request, CancellationToken ct = default)
+    {
+        var participant = await _context.ConversationParticipants
+            .FirstOrDefaultAsync(cp => cp.ConversationId == conversationId && cp.UserId == userId, ct);
+
+        if (participant is null)
+            return Result.Failure(MessagingErrors.NotAParticipant);
+
+        // Get messages that belong to this conversation and are in the request
+        var messages = await _context.Messages
+            .Where(m => m.ConversationId == conversationId && request.MessageIds.Contains(m.Id))
+            .ToListAsync(ct);
+
+        if (messages.Count == 0)
+            return Result.Success();
+
+        // Get existing receipts for this user to avoid duplicates
+        var existingReceiptMessageIds = await _context.MessageReadReceipts
+            .Where(rr => rr.UserId == userId && request.MessageIds.Contains(rr.MessageId))
+            .Select(rr => rr.MessageId)
+            .ToListAsync(ct);
+
+        var existingSet = existingReceiptMessageIds.ToHashSet();
+        var now = DateTime.UtcNow;
+        var newReceipts = new List<MessageReadReceipt>();
+
+        foreach (var msg in messages)
+        {
+            // Skip sender's own messages and already-read messages
+            if (msg.SenderId == userId || existingSet.Contains(msg.Id))
+                continue;
+
+            var receipt = new MessageReadReceipt
+            {
+                MessageId = msg.Id,
+                UserId = userId,
+                ReadAt = now
+            };
+            _context.MessageReadReceipts.Add(receipt);
+            newReceipts.Add(receipt);
+        }
+
+        if (newReceipts.Count == 0)
+            return Result.Success();
+
+        // Also update conversation-level LastReadAt
+        participant.LastReadAt = now;
+        await _context.SaveChangesAsync(ct);
+
+        // Notify other participants via SignalR
+        var otherParticipantIds = await _context.ConversationParticipants
+            .Where(cp => cp.ConversationId == conversationId && cp.UserId != userId)
+            .Select(cp => cp.UserId)
+            .ToListAsync(ct);
+
+        foreach (var receipt in newReceipts)
+        {
+            foreach (var otherUserId in otherParticipantIds)
+            {
+                await _hubContext.Clients.User(otherUserId)
+                    .MessageRead(conversationId, receipt.MessageId, userId, receipt.ReadAt);
+            }
+        }
+
+        return Result.Success();
+    }
+
+    public async Task<Result<MessageReadReceiptsResponse>> GetMessageReadReceiptsAsync(
+        string userId, string messageId, CancellationToken ct = default)
+    {
+        var message = await _context.Messages
+            .FirstOrDefaultAsync(m => m.Id == messageId, ct);
+
+        if (message is null)
+            return Result.Failure<MessageReadReceiptsResponse>(MessagingErrors.MessageNotFound);
+
+        // Verify user is a participant in the conversation
+        var isParticipant = await _context.ConversationParticipants
+            .AnyAsync(cp => cp.ConversationId == message.ConversationId && cp.UserId == userId, ct);
+
+        if (!isParticipant)
+            return Result.Failure<MessageReadReceiptsResponse>(MessagingErrors.NotAParticipant);
+
+        var receipts = await _context.MessageReadReceipts
+            .Include(rr => rr.User)
+            .Where(rr => rr.MessageId == messageId)
+            .OrderBy(rr => rr.ReadAt)
+            .Select(rr => new ReadReceiptResponse(
+                rr.UserId,
+                $"{rr.User.FirstName} {rr.User.LastName}",
+                BuildFullPhotoUrl(rr.User.PhotoUrl),
+                rr.ReadAt
+            ))
+            .ToListAsync(ct);
+
+        return Result.Success(new MessageReadReceiptsResponse(messageId, receipts));
+    }
+
+    // ═══════════════════════════════════════════════════════════════
     //  PRIVATE HELPERS
     // ═══════════════════════════════════════════════════════════════
 
@@ -816,7 +982,8 @@ public class MessagingService(
                 lastMsg.Type.ToString(),
                 lastMsg.CreatedAt,
                 lastMsg.EditedAt,
-                lastMsg.IsDeleted
+                lastMsg.IsDeleted,
+                null
             );
         }
 
