@@ -2,6 +2,8 @@ namespace Freeqy_APIs.Contracts.Projects;
 
 public record SimpleUserDto(
     string Id,
+    string? Track,
+    string? PhotoUrl,
     string Name
 );
 
@@ -29,6 +31,25 @@ public record ProjectListItemResponse(
     int MembersCount,
     DateTime CreatedAt,
     DateTime UpdatedAt
+);
+
+
+
+public record ProjectItemRespone(
+    string Id,
+    string Name,
+    string Description,
+    SimpleUserDto Owner,
+    CategoryDto Category,
+    string Status,
+    string Visibility,
+    DateOnly StartDate,
+    DateOnly EndDate,
+    IReadOnlyList<TechnologyDto> Technologies,
+    int MembersCount,
+    DateTime CreatedAt,
+    DateTime UpdatedAt,
+    List<UserProfileResponse> Members
 );
 
 public record ProjectListResponse(

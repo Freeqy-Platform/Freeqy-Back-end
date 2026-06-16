@@ -57,7 +57,7 @@ public class ProjectService(
     }
 
     // Should Review This Service
-    public async Task<Result<ProjectListItemResponse>> GetProjectByIdAsync(string id, 
+    public async Task<Result<ProjectItemRespone>> GetProjectByIdAsync(string id, 
         CancellationToken cancellationToken = default)
     {
         var project = await _dbContext.Projects
@@ -69,9 +69,9 @@ public class ProjectService(
             .FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
     
         if (project == null)
-            return Result.Failure<ProjectListItemResponse>(ProjectErrors.NotFound);
+            return Result.Failure<ProjectItemRespone>(ProjectErrors.NotFound);
     
-        var response = project.Adapt<ProjectListItemResponse>();
+        var response = project.Adapt<ProjectItemRespone>();
     
         return Result.Success(response);
     }

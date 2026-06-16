@@ -43,7 +43,7 @@ public interface IProjectService
     public Task<Result> RemoveMemberFromProject(string projectId, string userId, string memberId,
         CancellationToken cancellationToken = default);
         
-    public Task<Result<ProjectListItemResponse>> GetProjectByIdAsync(string id,CancellationToken cancellationToken = default);
+    public Task<Result<ProjectItemRespone>> GetProjectByIdAsync(string id,CancellationToken cancellationToken = default);
 
     Task<Result> ChangeProjectStatusAsync(string userId, string id, ChangeProjectStatusRequest request,
         CancellationToken cancellationToken = default);

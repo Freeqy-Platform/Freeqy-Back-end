@@ -19,14 +19,23 @@ public class MappingConfigurations : IRegister
 			.Map(dest => dest.CreatedAt, src => DateTime.UtcNow);
 
 		config.NewConfig<Meeting, MeetingResponse>();
-         config.NewConfig<Project, ProjectListItemResponse>()  
-              .Map(dest => dest.Owner, src => src.Owner.Adapt<SimpleUserDto>())
-              .Map(dest => dest.Category, src => src.Category.Adapt<CategoryDto>())
-              .Map(dest => dest.Technologies, src => src.Technologies.Select(t => t.Adapt<TechnologyDto>()).ToList())
-              .Map(dest => dest.MembersCount, src => src.ProjectMembers.Count);
+
+        config.NewConfig<Project, ProjectListItemResponse>()  
+            .Map(dest => dest.Owner, src => src.Owner.Adapt<SimpleUserDto>())
+            .Map(dest => dest.Category, src => src.Category.Adapt<CategoryDto>())
+            .Map(dest => dest.Technologies, src => src.Technologies.Select(t => t.Adapt<TechnologyDto>()).ToList())
+            .Map(dest => dest.MembersCount, src => src.ProjectMembers.Count);
          
-        
-         
+		config.NewConfig<Project, ProjectItemRespone>()
+            .Map(dest => dest.Owner, src => src.Owner.Adapt<SimpleUserDto>())
+            .Map(dest => dest.Category, src => src.Category.Adapt<CategoryDto>())
+            .Map(dest => dest.Technologies, src => src.Technologies.Select(t => t.Adapt<TechnologyDto>()).ToList())
+            .Map(dest => dest.MembersCount, src => src.ProjectMembers.Count)
+			.Map(dest => dest.Members, src => src.ProjectMembers.Select(pm => pm.User.Adapt<UserProfileResponse>()).ToList());
+
+
+
+
 
         config.NewConfig<ApplicationUser, UserProfileResponse>()
 	        .Map(dest => dest.Track, src => src.Track!.Name)
